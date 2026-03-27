@@ -165,7 +165,7 @@
 title: "SEO-optimized title (50-60 chars)"
 description: "Meta description (150-160 chars)"
 pubDate: 2026-01-15
-author: "My Robots Team"
+author: "Content Flows Team"
 tags: ["tag1", "tag2", "tag3"]
 featured: true/false
 image: "/images/blog/article-slug.jpg"
@@ -303,7 +303,7 @@ const { frontmatter } = Astro.props
   "datePublished": "{frontmatter.pubDate}",
   "author": {
     "@type": "Organization",
-    "name": "My Robots"
+    "name": "Content Flows"
   }
 }
 </script>
@@ -327,7 +327,7 @@ const { frontmatter } = Astro.props
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://myrobots.ai/blog/storm-wikipedia-quality-articles</loc>
+    <loc>https://contentflowz.com/blog/storm-wikipedia-quality-articles</loc>
     <lastmod>2026-01-15</lastmod>
     <priority>0.8</priority>
   </url>
@@ -339,7 +339,7 @@ const { frontmatter } = Astro.props
 # public/robots.txt
 User-agent: *
 Allow: /
-Sitemap: https://myrobots.ai/sitemap.xml
+Sitemap: https://contentflowz.com/sitemap.xml
 ```
 
 ---
@@ -633,7 +633,7 @@ Tous nos articles blog suivent cette structure:
 title: "How to [Benefit] with [Technology] - [Year] Guide"
 description: "Learn [outcome]. [Specific value prop]. Step-by-step guide with examples."
 pubDate: 2026-01-15
-author: "My Robots Team"
+author: "Content Flows Team"
 tags: ["primary keyword", "secondary", "tertiary"]
 featured: true/false
 image: "/images/blog/slug.jpg"

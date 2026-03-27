@@ -33,7 +33,7 @@ class TechStackAnalyzerAgent:
     Performs self-analysis of the project's tech stack and infrastructure.
     """
 
-    def __init__(self, llm_model: str = "groq/mixtral-8x7b-32768", project_path: str = "/root/my-robots"):
+    def __init__(self, llm_model: str = "groq/mixtral-8x7b-32768", project_path: str = "/root/contentflowz-lab"):
         """
         Initialize Tech Stack Analyzer with audit tools.
 
@@ -321,7 +321,7 @@ class TechStackAnalyzerAgent:
 # Create default instance
 def create_tech_stack_analyzer(
     llm_model: str = "mixtral-8x7b-32768",
-    project_path: str = "/root/my-robots"
+    project_path: str = "/root/contentflowz-lab"
 ) -> TechStackAnalyzerAgent:
     """Factory function to create Tech Stack Analyzer Agent"""
     return TechStackAnalyzerAgent(llm_model=llm_model, project_path=project_path)

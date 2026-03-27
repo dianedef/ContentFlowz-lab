@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 @pytest.mark.unit
 def test_project_path_setup():
     """Test that project path is correctly set up."""
-    assert project_root.name == "my-robots"
+    assert project_root.name == "ContentFlowz_lab"
     assert (project_root / "agents").exists()
 
 

@@ -23,7 +23,7 @@ except ImportError:
     MEM0_AVAILABLE = False
 
 # Default user/agent ID for scoping memories
-DEFAULT_USER_ID = "my-robots"
+DEFAULT_USER_ID = "contentflowz"
 
 
 class MemoryService:

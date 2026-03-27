@@ -56,7 +56,7 @@ class ImageRobotCrew:
     def __init__(
         self,
         llm_model: str = "gpt-4o-mini",
-        project_path: str = "/root/my-robots"
+        project_path: str = "/root/contentflowz-lab"
     ):
         """
         Initialize Image Robot Crew with all agents.
@@ -479,7 +479,7 @@ class ImageRobotCrew:
 
 def create_image_robot_crew(
     llm_model: str = "gpt-4o-mini",
-    project_path: str = "/root/my-robots"
+    project_path: str = "/root/contentflowz-lab"
 ) -> ImageRobotCrew:
     """
     Factory function to create Image Robot Crew.

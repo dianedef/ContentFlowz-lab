@@ -66,8 +66,8 @@ def get_openrouter_client(api_key: Optional[str] = None) -> OpenAI:
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
         default_headers={
-            "HTTP-Referer": os.getenv("APP_URL", "https://bizflowz.com"),
-            "X-Title": "BizFlowz SEO Robots"
+            "HTTP-Referer": os.getenv("APP_URL", "https://contentflowz.com"),
+            "X-Title": "Content Flows SEO Agents"
         }
     )
 

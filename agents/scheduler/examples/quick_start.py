@@ -14,7 +14,7 @@ def main():
     crew = create_scheduler_crew(
         llm_model="mixtral-8x7b-32768",
         base_url="http://localhost:3000",
-        project_path="/root/my-robots"
+        project_path="/root/contentflowz-lab"
     )
     print("✅ Scheduler initialized\n")
 

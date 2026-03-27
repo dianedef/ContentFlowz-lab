@@ -180,7 +180,7 @@ app = FastAPI(
     openapi_url="/openapi.json",
     contact={
         "name": "SEO Robots Team",
-        "url": "https://github.com/yourusername/my-robots",
+        "url": "https://github.com/yourusername/contentflowz",
     },
     license_info={
         "name": "MIT",
@@ -201,8 +201,8 @@ app.add_middleware(
         "http://localhost:3000",      # Next.js dev
         "http://localhost:3001",      # Alternative port
         "http://127.0.0.1:3000",      # Alternative localhost
-        "https://bizflowz.com",       # Production domain
-        "https://www.bizflowz.com",   # Production domain
+        "https://contentflowz.com",       # Production domain
+        "https://www.contentflowz.com",   # Production domain
     ],
     allow_origin_regex=r"https://.*\.(vercel\.app|railway\.app|render\.com)$",
     allow_credentials=True,

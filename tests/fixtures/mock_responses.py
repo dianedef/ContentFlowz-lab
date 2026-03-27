@@ -1,4 +1,4 @@
-"""Test utilities and mock responses for my-robots tests."""
+"""Test utilities and mock responses for contentflowz tests."""
 
 from unittest.mock import MagicMock
 from typing import Dict, Any, List

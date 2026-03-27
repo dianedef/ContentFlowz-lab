@@ -858,7 +858,7 @@ if __name__ == "__main__":
     print("=== GitHub Repo Analyzer Test ===\n")
     
     # Example: Analyze this repo
-    test_url = "https://github.com/dianedef/my-robots.git"
+    test_url = "https://github.com/dianedef/contentflowz.git"
     
     report = analyze_repo(
         repo_url=test_url,

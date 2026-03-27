@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # Bunny Storage Zone API base
 BUNNY_STORAGE_BASE = "https://storage.bunnycdn.com"
 # Default storage zone name — same as the one used by the image robot
-STORAGE_ZONE = "my-robots"
+STORAGE_ZONE = "contentflowz"
 
 
 def upload_to_bunny(

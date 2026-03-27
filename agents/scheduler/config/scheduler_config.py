@@ -63,8 +63,8 @@ class SchedulerConfig:
     GITHUB_REPO = os.getenv("GITHUB_REPO", "username/repo")
 
     # Project Paths
-    PROJECT_PATH = os.getenv("SCHEDULER_PROJECT_PATH", "/root/my-robots")
-    DATA_DIR = os.getenv("SCHEDULER_DATA_DIR", "/root/my-robots/data/scheduler")
+    PROJECT_PATH = os.getenv("SCHEDULER_PROJECT_PATH", "/root/contentflowz-lab")
+    DATA_DIR = os.getenv("SCHEDULER_DATA_DIR", "/root/contentflowz-lab/data/scheduler")
 
     # Site Configuration
     BASE_URL = os.getenv("SCHEDULER_BASE_URL", "http://localhost:3000")

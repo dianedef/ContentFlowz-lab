@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point for the my-robots API server.
+Entry point for the contentflowz API server.
 PM2 runs: flox activate -- ./venv/bin/python main.py
 The PORT env var (set by PM2) controls the listening port.
 """

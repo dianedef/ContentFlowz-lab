@@ -218,7 +218,7 @@ def main():
         print("Error: mem0ai is not installed. Run: pip install mem0ai")
         sys.exit(1)
 
-    print("🧠 My Robots — Brain Seeding")
+    print("🧠 Content Flows — Brain Seeding")
     print("=" * 40)
 
     memory = get_memory_service()

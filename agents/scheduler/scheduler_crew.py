@@ -39,7 +39,7 @@ class SchedulerCrew:
         self,
         llm_model: str = "mixtral-8x7b-32768",
         base_url: str = "http://localhost:3000",
-        project_path: str = "/root/my-robots"
+        project_path: str = "/root/contentflowz-lab"
     ):
         """
         Initialize Scheduler Crew with all agents.
@@ -414,7 +414,7 @@ class SchedulerCrew:
 def create_scheduler_crew(
     llm_model: str = "mixtral-8x7b-32768",
     base_url: str = "http://localhost:3000",
-    project_path: str = "/root/my-robots"
+    project_path: str = "/root/contentflowz-lab"
 ) -> SchedulerCrew:
     """
     Factory function to create Scheduler Crew.

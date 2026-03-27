@@ -635,7 +635,7 @@ class SitemapMonitor:
 
     SHRINK_THRESHOLD = 0.10  # Alert if URL count drops more than 10%
 
-    def __init__(self, data_dir: str = "/root/my-robots/data/scheduler"):
+    def __init__(self, data_dir: str = "/root/contentflowz-lab/data/scheduler"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.baselines_file = self.data_dir / "sitemap_baselines.json"

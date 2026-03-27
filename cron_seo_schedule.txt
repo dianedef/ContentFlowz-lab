@@ -4,26 +4,26 @@
 # Environment variables (adjust paths as needed)
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-PYTHON_PATH=/root/my-robots/venv/bin/python3
+PYTHON_PATH=/root/contentflowz-lab/venv/bin/python3
 
 # Run SEO pipeline daily at 9 AM
-0 9 * * * cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py "your topic here" >> /var/log/seo-bot.log 2>&1
+0 9 * * * cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py "your topic here" >> /var/log/seo-bot.log 2>&1
 
 # Run weekly batch on Monday at 8 AM (multiple topics)
-0 8 * * 1 cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py --batch "topic 1" "topic 2" "topic 3" >> /var/log/seo-bot.log 2>&1
+0 8 * * 1 cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py --batch "topic 1" "topic 2" "topic 3" >> /var/log/seo-bot.log 2>&1
 
 # Examples of different schedules:
 # Every day at 2 PM:
-# 0 14 * * * cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py "daily topic" >> /var/log/seo-bot.log 2>&1
+# 0 14 * * * cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py "daily topic" >> /var/log/seo-bot.log 2>&1
 
 # Every Monday and Thursday at 10 AM:
-# 0 10 * * 1,4 cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py "weekly topic" >> /var/log/seo-bot.log 2>&1
+# 0 10 * * 1,4 cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py "weekly topic" >> /var/log/seo-bot.log 2>&1
 
 # Twice daily (morning and evening):
-# 0 9,18 * * * cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py "frequent topic" >> /var/log/seo-bot.log 2>&1
+# 0 9,18 * * * cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py "frequent topic" >> /var/log/seo-bot.log 2>&1
 
 # First day of every month at 9 AM:
-# 0 9 1 * * cd /root/my-robots && /root/my-robots/venv/bin/python3 run_seo_deployment.py "monthly topic" >> /var/log/seo-bot.log 2>&1
+# 0 9 1 * * cd /root/contentflowz-lab && /root/contentflowz-lab/venv/bin/python3 run_seo_deployment.py "monthly topic" >> /var/log/seo-bot.log 2>&1
 
 # ===== INSTALLATION INSTRUCTIONS =====
 #

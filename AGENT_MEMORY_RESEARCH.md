@@ -48,12 +48,12 @@ memory = Memory()
 # Search for relevant memories
 relevant_memories = memory.search(
     query="brand voice and content strategy",
-    user_id="my-robots-project",
+    user_id="contentflowz-project",
     limit=3
 )
 
 # Add new memories from interactions
-memory.add(messages, user_id="my-robots-project")
+memory.add(messages, user_id="contentflowz-project")
 ```
 
 **Memory Types**:
@@ -158,7 +158,7 @@ client = create_client()
 agent = client.create_agent(
     name="content-strategist",
     memory_blocks=[
-        {"label": "project_context", "value": "Brand: my-robots..."},
+        {"label": "project_context", "value": "Brand: Content Flows..."},
         {"label": "content_strategy", "value": "Topic clusters: ..."},
         {"label": "past_content", "value": "Previously published: ..."},
     ],
@@ -264,14 +264,14 @@ project_knowledge = [
     {
         "role": "system",
         "content": """
-        Project: my-robots
+        Project: contentflowz
         Brand Voice: Technical but accessible, informal French (tutoiement)
         Main Topics: AI agents, automation, SEO, newsletters
         Target Audience: French-speaking developers and marketers
         """
     }
 ]
-memory.add(project_knowledge, user_id="my-robots-project")
+memory.add(project_knowledge, user_id="contentflowz-project")
 ```
 
 #### Step 2: Add Context Loader to Each Agent
@@ -281,7 +281,7 @@ def load_project_context(topic: str) -> str:
     """Load relevant context before any content generation."""
     relevant = memory.search(
         query=f"brand voice, existing content, and strategy for {topic}",
-        user_id="my-robots-project",
+        user_id="contentflowz-project",
         limit=5
     )
     return "\n".join(f"- {entry['memory']}" for entry in relevant["results"])
@@ -302,7 +302,7 @@ def save_to_memory(content_type: str, title: str, topics: list, summary: str):
             Date: {datetime.now().isoformat()}
             """
         }
-    ], user_id="my-robots-project")
+    ], user_id="contentflowz-project")
 ```
 
 #### Step 4: CrewAI + Mem0 Integration
@@ -315,7 +315,7 @@ external_memory = ExternalMemory(
     embedder_config={
         "provider": "mem0",
         "config": {
-            "user_id": "my-robots-project",
+            "user_id": "contentflowz-project",
         }
     }
 )

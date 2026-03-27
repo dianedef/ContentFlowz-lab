@@ -1,11 +1,11 @@
 # Changelog
 
-All notable changes to my-robots are documented here.
+All notable changes to Content Flows are documented here.
 
 ## [2026-03-10]
 
 ### Added
-- PostHog injecté dans `website/src/layouts/Layout.astro` (production uniquement, placeholder `POSTHOG_KEY_MYROBOTS` à remplacer)
+- PostHog injecté dans `website/src/layouts/Layout.astro` (production uniquement, placeholder `POSTHOG_KEY_CONTENTFLOWZ` à remplacer)
 - Page `/privacy` créée (`website/src/pages/privacy.astro`) avec bouton opt-out PostHog
 
 ## [Unreleased]
