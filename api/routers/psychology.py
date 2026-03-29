@@ -202,12 +202,29 @@ def _run_pipeline_task(
         voice = request.creator_voice or {}
         body = ""
 
+        # Load project memory context to avoid duplicate topics
+        existing_content_context = ""
+        try:
+            from memory.memory_service import get_memory_service
+            mem = get_memory_service()
+            existing_content_context = mem.load_project_context(
+                query=angle.get("title", ""),
+                user_id=getattr(request, '_user_id', None),
+                project_id=request.project_id,
+                limit=10,
+            )
+        except Exception:
+            pass  # Memory service is optional
+
         if fmt == "article":
             from agents.seo.seo_crew import SEOContentCrew
             crew = SEOContentCrew()
+            brand_voice_str = json.dumps(voice) if voice else None
+            if existing_content_context and brand_voice_str:
+                brand_voice_str += f"\n\n{existing_content_context}"
             result = crew.generate_content(
                 target_keyword=request.seo_keyword or angle.get("title", ""),
-                brand_voice=json.dumps(voice) if voice else None,
+                brand_voice=brand_voice_str,
                 word_count=2500,
             )
             body = result.get("outputs", {}).get("article", str(result))
@@ -258,15 +275,19 @@ def _run_pipeline_task(
             except Exception:
                 pass
 
-        # Memory integration: record generation for semantic dedup
+        # Memory integration: record generation for semantic dedup (scoped)
         try:
-            from memory.memory_service import MemoryService
-            mem = MemoryService()
-            mem.store_generation(
+            from memory.memory_service import get_memory_service
+            mem = get_memory_service()
+            mem.store_generation_scoped(
                 content_type=fmt,
                 title=request.angle_data.get("title", ""),
+                user_id=getattr(request, '_user_id', None),
+                project_id=request.project_id,
                 topics=request.angle_data.get("topics", []),
                 summary=body[:200] if body else "",
+                seo_keyword=request.seo_keyword,
+                source=request.angle_data.get("source"),
             )
         except Exception:
             pass  # Memory service is optional

@@ -26,6 +26,19 @@ except ImportError:
 DEFAULT_USER_ID = "contentflowz"
 
 
+def _scope_user_id(user_id: Optional[str] = None, project_id: Optional[str] = None) -> str:
+    """Build a scoped user_id for Mem0 isolation.
+
+    Memories are isolated per user+project so different projects
+    don't pollute each other's content brain.
+    """
+    if user_id and project_id:
+        return f"{user_id}:{project_id}"
+    if user_id:
+        return user_id
+    return DEFAULT_USER_ID
+
+
 class MemoryService:
     """
     Shared memory layer wrapping Mem0.
@@ -204,6 +217,84 @@ class MemoryService:
             agent_id=content_type,
             metadata=record.to_metadata(),
         )
+
+    def store_generation_scoped(
+        self,
+        content_type: str,
+        title: str,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        topics: Optional[List[str]] = None,
+        summary: str = "",
+        seo_keyword: Optional[str] = None,
+        source: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Record a content generation with user+project scoping.
+
+        This is the preferred method over store_generation() as it
+        ensures memories are isolated per user and project.
+        """
+        record = GenerationRecord(
+            content_type=content_type,
+            title=title,
+            topics=topics or [],
+            summary=summary,
+        )
+        metadata = record.to_metadata()
+        if seo_keyword:
+            metadata["seo_keyword"] = seo_keyword
+        if source:
+            metadata["source"] = source
+
+        scoped_uid = _scope_user_id(user_id, project_id)
+        kwargs: Dict[str, Any] = {
+            "messages": [{"role": "user", "content": record.to_memory_content()}],
+            "user_id": scoped_uid,
+            "metadata": metadata,
+        }
+        return self._client.add(**kwargs)
+
+    def load_project_context(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        limit: int = 15,
+    ) -> str:
+        """Load project memory context for prompt injection.
+
+        Returns a formatted string describing what content already exists
+        in this project, so AI agents can avoid generating duplicates.
+
+        Typical usage in a generation pipeline:
+            context = mem.load_project_context("content marketing SEO", user_id, project_id)
+            prompt += f"\\n\\nExisting project content:\\n{context}\\nDo NOT repeat these topics."
+        """
+        scoped_uid = _scope_user_id(user_id, project_id)
+
+        kwargs = {"query": query, "limit": limit, "user_id": scoped_uid}
+        results = self._client.search(**kwargs)
+
+        entries = []
+        raw_results = results.get("results", results) if isinstance(results, dict) else results
+        for item in raw_results:
+            if isinstance(item, dict):
+                entries.append(MemoryEntry(
+                    id=item.get("id"),
+                    memory=item.get("memory", ""),
+                    metadata=item.get("metadata", {}),
+                    score=item.get("score"),
+                ))
+
+        if not entries:
+            return ""
+
+        lines = [f"=== Project Content History ({len(entries)} items) ==="]
+        for i, entry in enumerate(entries[:limit], 1):
+            mem_type = entry.metadata.get("type", "general")
+            lines.append(f"[{i}] ({mem_type}) {entry.memory}")
+        lines.append("=== End History — do NOT regenerate these topics ===")
+        return "\n".join(lines)
 
     def store_brand_knowledge(self, knowledge: str) -> Dict[str, Any]:
         """
