@@ -35,7 +35,7 @@
 | 🟡 | No structured logging for production | Project-wide | **FIXED** |
 | 🟡 | No rate limiting on any endpoint | `api/main.py` | **FIXED** |
 | 🟡 | No DB health check in health endpoint | `api/routers/health.py` | **FIXED** |
-| 🟡 | In-memory state (deployment, templates routers) | `deployment.py`, `templates.py` | Open |
+| 🟡 | In-memory state (deployment, templates routers) | `api/services/job_store.py` | **FIXED** |
 | 🟡 | test_runner.py user input sanitization | `test_runner.py` | **FIXED** |
 
 ## Backlog

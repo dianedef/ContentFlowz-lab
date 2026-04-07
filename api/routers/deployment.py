@@ -15,6 +15,7 @@ import asyncio
 from datetime import datetime
 
 from api.dependencies.auth import require_current_user
+from api.services.job_store import job_store
 
 from api.models.deployment import (
     DeploymentRunRequest,
@@ -38,10 +39,11 @@ router = APIRouter(
     dependencies=[Depends(require_current_user)],
 )
 
-# In-memory state (replace with Redis/DB for production)
-_current_job: Optional[dict] = None
+DEPLOY_JOB_TYPE = "deployment"
+SCHEDULE_JOB_TYPE = "deployment_schedule"
+
+# Logs remain in-memory (ephemeral by nature, no need to persist)
 _logs: List[LogEntry] = []
-_schedules: dict[str, Schedule] = {}
 
 # Pipeline steps for progress tracking
 PIPELINE_STEPS = [
@@ -88,173 +90,116 @@ def _initialize_steps() -> List[StepStatus]:
 
 
 async def execute_pipeline(
+    job_id: str,
     topic: str,
     dry_run: bool,
     auto_deploy: bool,
     target_repo: Optional[str],
 ) -> None:
     """Execute SEO pipeline (background task)"""
-    global _current_job
 
-    if _current_job is None:
-        return
+    steps = _initialize_steps()
 
-    _current_job["steps"] = _initialize_steps()
+    async def _update(step: Optional[str], progress: int, **kw: object) -> None:
+        await job_store.update(job_id, current_step=step, progress=progress, steps=[s.model_dump() for s in steps], **kw)
+
+    def _step_status(step_name: str, status: str) -> None:
+        for s in steps:
+            if s.name == step_name:
+                s.status = status
+                if status == "running":
+                    s.started_at = datetime.now()
+                elif status in ("completed", "error"):
+                    s.completed_at = datetime.now()
+                    if s.started_at:
+                        s.duration_seconds = (s.completed_at - s.started_at).total_seconds()
+                break
+
+    async def _is_running() -> bool:
+        job = await job_store.get(job_id)
+        return bool(job and job.get("running"))
 
     try:
-        # Research phase
-        _current_job["current_step"] = "research"
-        _current_job["progress"] = 10
-        _update_step_status("research", "running")
-        _add_log("info", "research", f"Starting research for topic: {topic}")
+        pipeline_phases = [
+            ("research", 10, f"Starting research for topic: {topic}"),
+            ("strategy", 25, "Developing content strategy"),
+            ("content", 45, "Generating content"),
+            ("technical_seo", 65, "Applying technical SEO optimizations"),
+            ("editing", 80, "Final editing and quality check"),
+        ]
 
-        # Simulate research (replace with actual agent call)
-        await asyncio.sleep(2)
-        _update_step_status("research", "completed")
-        _add_log("info", "research", "Research phase completed")
+        for step_name, progress, msg in pipeline_phases:
+            _step_status(step_name, "running")
+            _add_log("info", step_name, msg)
+            await _update(step_name, progress)
 
-        if not _current_job.get("running"):
-            _add_log("warning", "research", "Pipeline stopped by user")
-            return
+            await asyncio.sleep(2)
+            _step_status(step_name, "completed")
+            _add_log("info", step_name, f"{step_name.replace('_', ' ').title()} completed")
 
-        # Strategy phase
-        _current_job["current_step"] = "strategy"
-        _current_job["progress"] = 25
-        _update_step_status("strategy", "running")
-        _add_log("info", "strategy", "Developing content strategy")
-
-        await asyncio.sleep(2)
-        _update_step_status("strategy", "completed")
-        _add_log("info", "strategy", "Strategy phase completed")
-
-        if not _current_job.get("running"):
-            return
-
-        # Content generation phase
-        _current_job["current_step"] = "content"
-        _current_job["progress"] = 45
-        _update_step_status("content", "running")
-        _add_log("info", "content", "Generating content")
-
-        await asyncio.sleep(3)
-        _update_step_status("content", "completed")
-        _add_log("info", "content", "Content generation completed")
-
-        if not _current_job.get("running"):
-            return
-
-        # Technical SEO phase
-        _current_job["current_step"] = "technical_seo"
-        _current_job["progress"] = 65
-        _update_step_status("technical_seo", "running")
-        _add_log("info", "technical_seo", "Applying technical SEO optimizations")
-
-        await asyncio.sleep(2)
-        _update_step_status("technical_seo", "completed")
-        _add_log("info", "technical_seo", "Technical SEO completed")
-
-        if not _current_job.get("running"):
-            return
-
-        # Editing phase
-        _current_job["current_step"] = "editing"
-        _current_job["progress"] = 80
-        _update_step_status("editing", "running")
-        _add_log("info", "editing", "Final editing and quality check")
-
-        await asyncio.sleep(2)
-        _update_step_status("editing", "completed")
-        _add_log("info", "editing", "Editing completed")
-
-        if not _current_job.get("running"):
-            return
+            if not await _is_running():
+                _add_log("warning", step_name, "Pipeline stopped by user")
+                return
 
         # Deployment phase
         if auto_deploy and not dry_run:
-            _current_job["current_step"] = "deployment"
-            _current_job["progress"] = 90
-            _update_step_status("deployment", "running")
+            _step_status("deployment", "running")
             _add_log("info", "deployment", f"Deploying to {target_repo or 'default repository'}")
-
+            await _update("deployment", 90)
             await asyncio.sleep(2)
-            _update_step_status("deployment", "completed")
+            _step_status("deployment", "completed")
             _add_log("info", "deployment", "Deployment completed successfully")
         else:
-            _update_step_status("deployment", "completed")
-            if dry_run:
-                _add_log("info", "deployment", "Dry run - skipping deployment")
-            else:
-                _add_log("info", "deployment", "No-deploy flag set - skipping deployment")
+            _step_status("deployment", "completed")
+            _add_log("info", "deployment", "Dry run - skipping deployment" if dry_run else "No-deploy flag set - skipping deployment")
 
-        _current_job["progress"] = 100
-        _current_job["current_step"] = None
+        await _update(None, 100)
         _add_log("info", "complete", f"Pipeline completed successfully for: {topic}")
 
     except Exception as e:
-        error_msg = str(e)
-        _current_job["error"] = error_msg
-        _add_log("error", _current_job.get("current_step"), f"Pipeline failed: {error_msg}")
-
-        # Mark current step as error
-        if _current_job.get("current_step"):
-            _update_step_status(_current_job["current_step"], "error")
+        _add_log("error", None, f"Pipeline failed: {e}")
+        await job_store.update(job_id, error=str(e))
 
     finally:
-        _current_job["running"] = False
-
-
-def _update_step_status(step_name: str, status: str) -> None:
-    """Update status of a pipeline step"""
-    global _current_job
-    if _current_job and "steps" in _current_job:
-        for step in _current_job["steps"]:
-            if step.name == step_name:
-                step.status = status
-                if status == "running":
-                    step.started_at = datetime.now()
-                elif status in ("completed", "error"):
-                    step.completed_at = datetime.now()
-                    if step.started_at:
-                        step.duration_seconds = (
-                            step.completed_at - step.started_at
-                        ).total_seconds()
-                break
+        await job_store.update(job_id, running=False, status="completed")
 
 
 async def execute_batch(
+    job_id: str,
     topics: List[str],
     delay: int,
     auto_deploy: bool,
 ) -> None:
     """Execute batch deployment"""
-    global _current_job
 
     for i, topic in enumerate(topics):
-        if _current_job is None or not _current_job.get("running"):
+        job = await job_store.get(job_id)
+        if not job or not job.get("running"):
             _add_log("warning", "batch", "Batch processing stopped")
             break
 
-        _current_job["topic"] = topic
-        _current_job["batch_progress"] = BatchProgress(
-            completed=i,
-            total=len(topics),
-            current_topic=topic,
+        await job_store.update(
+            job_id,
+            topic=topic,
+            batch_progress={"completed": i, "total": len(topics), "current_topic": topic},
         )
         _add_log("info", "batch", f"Processing topic {i + 1}/{len(topics)}: {topic}")
 
-        # Execute pipeline for this topic
-        await execute_pipeline(topic, False, auto_deploy, None)
+        await execute_pipeline(job_id, topic, False, auto_deploy, None)
 
-        _current_job["batch_progress"].completed = i + 1
+        await job_store.update(
+            job_id,
+            batch_progress={"completed": i + 1, "total": len(topics), "current_topic": topic},
+        )
 
-        # Delay between topics (except for last one)
-        if i < len(topics) - 1 and _current_job.get("running"):
-            _add_log("info", "batch", f"Waiting {delay}s before next topic...")
-            await asyncio.sleep(delay)
+        if i < len(topics) - 1:
+            job = await job_store.get(job_id)
+            if job and job.get("running"):
+                _add_log("info", "batch", f"Waiting {delay}s before next topic...")
+                await asyncio.sleep(delay)
 
-    if _current_job:
-        _current_job["running"] = False
-        _add_log("info", "batch", "Batch processing completed")
+    await job_store.update(job_id, running=False, status="completed")
+    _add_log("info", "batch", "Batch processing completed")
 
 
 @router.post("/run", response_model=DeploymentRunResponse)
@@ -269,30 +214,31 @@ async def run_deployment(
     The pipeline runs in the background and progress can be monitored
     via the /status endpoint.
     """
-    global _current_job
-
-    if _current_job and _current_job.get("running"):
+    # Check for already running deployment
+    running = await job_store.list_by_type(DEPLOY_JOB_TYPE, limit=1)
+    if running and running[0].get("running"):
         raise HTTPException(
             status_code=400,
             detail="Deployment already running. Stop it first or wait for completion.",
         )
 
     job_id = str(uuid.uuid4())
-    _current_job = {
-        "job_id": job_id,
-        "running": True,
-        "job_type": "single",
-        "topic": request.topic,
-        "current_step": None,
-        "progress": 0,
-        "steps": _initialize_steps(),
-        "started_at": datetime.now(),
-    }
+    await job_store.upsert(
+        job_id,
+        DEPLOY_JOB_TYPE,
+        status="running",
+        running=True,
+        topic=request.topic,
+        current_step=None,
+        progress=0,
+        steps=[s.model_dump() for s in _initialize_steps()],
+    )
 
     _add_log("info", None, f"Starting deployment for topic: {request.topic}")
 
     background_tasks.add_task(
         execute_pipeline,
+        job_id,
         request.topic,
         request.dry_run,
         not request.no_deploy,
@@ -316,36 +262,32 @@ async def run_batch(
 
     Processes multiple topics sequentially with configurable delay between them.
     """
-    global _current_job
-
-    if _current_job and _current_job.get("running"):
+    running = await job_store.list_by_type(DEPLOY_JOB_TYPE, limit=1)
+    if running and running[0].get("running"):
         raise HTTPException(
             status_code=400,
             detail="Deployment already running. Stop it first or wait for completion.",
         )
 
     job_id = str(uuid.uuid4())
-    _current_job = {
-        "job_id": job_id,
-        "running": True,
-        "job_type": "batch",
-        "topics": request.topics,
-        "topic": request.topics[0] if request.topics else None,
-        "current_step": None,
-        "progress": 0,
-        "steps": _initialize_steps(),
-        "batch_progress": BatchProgress(
-            completed=0,
-            total=len(request.topics),
-            current_topic=request.topics[0] if request.topics else None,
-        ),
-        "started_at": datetime.now(),
-    }
+    await job_store.upsert(
+        job_id,
+        DEPLOY_JOB_TYPE,
+        status="running",
+        running=True,
+        topics=request.topics,
+        topic=request.topics[0] if request.topics else None,
+        current_step=None,
+        progress=0,
+        steps=[s.model_dump() for s in _initialize_steps()],
+        batch_progress={"completed": 0, "total": len(request.topics), "current_topic": request.topics[0] if request.topics else None},
+    )
 
     _add_log("info", None, f"Starting batch deployment for {len(request.topics)} topics")
 
     background_tasks.add_task(
         execute_batch,
+        job_id,
         request.topics,
         request.delay_seconds,
         request.auto_deploy,
@@ -366,19 +308,33 @@ async def get_status() -> DeploymentStatus:
     Returns the current state of any running deployment including
     progress, current step, and any errors.
     """
-    if not _current_job:
+    jobs = await job_store.list_by_type(DEPLOY_JOB_TYPE, limit=1)
+    if not jobs:
         return DeploymentStatus(running=False)
 
+    job = jobs[0]
+    # Reconstruct StepStatus objects from stored dicts
+    raw_steps = job.get("steps", [])
+    steps = []
+    for s in raw_steps:
+        if isinstance(s, dict):
+            steps.append(StepStatus(**s))
+        elif isinstance(s, StepStatus):
+            steps.append(s)
+
+    batch = job.get("batch_progress")
+    batch_progress = BatchProgress(**batch) if isinstance(batch, dict) else batch
+
     return DeploymentStatus(
-        running=_current_job.get("running", False),
-        job_id=_current_job.get("job_id"),
-        job_type=_current_job.get("job_type"),
-        topic=_current_job.get("topic"),
-        current_step=_current_job.get("current_step"),
-        progress=_current_job.get("progress", 0),
-        steps=_current_job.get("steps", []),
-        batch_progress=_current_job.get("batch_progress"),
-        error=_current_job.get("error"),
+        running=job.get("running", False),
+        job_id=job.get("job_id"),
+        job_type=job.get("job_type", DEPLOY_JOB_TYPE),
+        topic=job.get("topic"),
+        current_step=job.get("current_step"),
+        progress=job.get("progress", 0),
+        steps=steps,
+        batch_progress=batch_progress,
+        error=job.get("error"),
     )
 
 
@@ -389,11 +345,9 @@ async def stop_deployment() -> StopResponse:
 
     Gracefully stops the current deployment at the next checkpoint.
     """
-    global _current_job
-
-    if _current_job:
-        _current_job["running"] = False
-        _current_job["stopped"] = True
+    jobs = await job_store.list_by_type(DEPLOY_JOB_TYPE, limit=1)
+    if jobs and jobs[0].get("running"):
+        await job_store.update(jobs[0]["job_id"], running=False, stopped=True)
         _add_log("warning", None, "Deployment stopped by user")
 
     return StopResponse(status="stopped")
@@ -434,7 +388,17 @@ async def list_schedules() -> List[Schedule]:
 
     Returns all configured deployment schedules.
     """
-    return list(_schedules.values())
+    jobs = await job_store.list_by_type(SCHEDULE_JOB_TYPE, limit=100)
+    return [
+        Schedule(
+            id=j["job_id"],
+            schedule_type=j.get("schedule_type", "custom"),
+            cron_expression=j.get("cron_expression", "0 9 * * *"),
+            topics=j.get("topics", []),
+            enabled=j.get("enabled", True),
+        )
+        for j in jobs
+    ]
 
 
 @router.post("/schedules", response_model=Schedule)
@@ -447,14 +411,15 @@ async def create_schedule(request: ScheduleRequest) -> Schedule:
     schedule_id = str(uuid.uuid4())
     cron = request.cron_expression or _get_default_cron(request.schedule_type)
 
-    schedule = Schedule(
-        id=schedule_id,
-        schedule_type=request.schedule_type,
+    await job_store.upsert(
+        schedule_id,
+        SCHEDULE_JOB_TYPE,
+        status="active",
+        schedule_type=request.schedule_type.value,
         cron_expression=cron,
         topics=request.topics,
         enabled=request.enabled,
     )
-    _schedules[schedule_id] = schedule
 
     _add_log(
         "info",
@@ -462,7 +427,13 @@ async def create_schedule(request: ScheduleRequest) -> Schedule:
         f"Created schedule {schedule_id}: {request.schedule_type.value} for {len(request.topics)} topics",
     )
 
-    return schedule
+    return Schedule(
+        id=schedule_id,
+        schedule_type=request.schedule_type,
+        cron_expression=cron,
+        topics=request.topics,
+        enabled=request.enabled,
+    )
 
 
 @router.patch("/schedules/{schedule_id}", response_model=Schedule)
@@ -475,20 +446,26 @@ async def update_schedule(
 
     Updates an existing schedule's configuration.
     """
-    if schedule_id not in _schedules:
+    job = await job_store.get(schedule_id)
+    if not job:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
-    schedule = _schedules[schedule_id]
-
     if enabled is not None:
-        schedule.enabled = enabled
+        await job_store.update(schedule_id, enabled=enabled)
         _add_log(
             "info",
             None,
             f"Schedule {schedule_id} {'enabled' if enabled else 'disabled'}",
         )
+        job["enabled"] = enabled
 
-    return schedule
+    return Schedule(
+        id=schedule_id,
+        schedule_type=job.get("schedule_type", "custom"),
+        cron_expression=job.get("cron_expression", "0 9 * * *"),
+        topics=job.get("topics", []),
+        enabled=job.get("enabled", True),
+    )
 
 
 @router.delete("/schedules/{schedule_id}", response_model=DeleteResponse)
@@ -498,8 +475,7 @@ async def delete_schedule(schedule_id: str) -> DeleteResponse:
 
     Removes a deployment schedule.
     """
-    if schedule_id in _schedules:
-        del _schedules[schedule_id]
-        _add_log("info", None, f"Deleted schedule {schedule_id}")
+    await job_store.delete(schedule_id)
+    _add_log("info", None, f"Deleted schedule {schedule_id}")
 
     return DeleteResponse(status="deleted")

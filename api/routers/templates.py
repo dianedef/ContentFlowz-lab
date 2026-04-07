@@ -14,6 +14,7 @@ from api.models.templates import (
     GenerateContentResponse,
 )
 from api.dependencies.auth import require_current_user
+from api.services.job_store import job_store
 from api.services.template_defaults import get_default_templates
 
 router = APIRouter(
@@ -23,8 +24,7 @@ router = APIRouter(
 )
 
 
-# In-memory job storage for content generation
-_generation_jobs: Dict[str, Dict[str, Any]] = {}
+JOB_TYPE = "content_generation"
 
 
 @router.get(
@@ -80,17 +80,13 @@ async def generate_content(
     """
     job_id = str(uuid.uuid4())[:8]
 
-    _generation_jobs[job_id] = {
-        "job_id": job_id,
-        "status": "pending",
-        "progress": 0,
-        "message": "Job queued",
-        "result": None,
-    }
+    job = await job_store.upsert(
+        job_id, JOB_TYPE, status="pending", progress=0, message="Job queued",
+    )
 
     background_tasks.add_task(_run_content_generation, job_id, request)
 
-    return _generation_jobs[job_id]
+    return job
 
 
 @router.get(
@@ -99,9 +95,10 @@ async def generate_content(
 )
 async def get_generation_status(job_id: str):
     """Check the status of a content generation job."""
-    if job_id not in _generation_jobs:
+    job = await job_store.get(job_id)
+    if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-    return _generation_jobs[job_id]
+    return job
 
 
 # ─── Internal helpers ─────────────────────────────────────────────
@@ -177,10 +174,7 @@ Return ONLY the prompt text, nothing else."""
 async def _run_content_generation(job_id: str, request: GenerateContentRequest):
     """Execute the 3-pass hybrid content generation pipeline."""
     try:
-        job = _generation_jobs[job_id]
-        job["status"] = "running"
-        job["progress"] = 5
-        job["message"] = "Preparing template..."
+        await job_store.update(job_id, status="running", progress=5, message="Preparing template...")
 
         template = request.template
         sections = template.get("sections", [])
@@ -212,8 +206,7 @@ async def _run_content_generation(job_id: str, request: GenerateContentRequest):
 
         # ─── Pass 1: Metadata ───────────────────────────────────
         if metadata_sections:
-            job["progress"] = 15
-            job["message"] = "Generating metadata (pass 1/3)..."
+            await job_store.update(job_id, progress=15, message="Generating metadata (pass 1/3)...")
 
             metadata_result = _generate_pass(
                 template_name=template_name,
@@ -226,8 +219,7 @@ async def _run_content_generation(job_id: str, request: GenerateContentRequest):
 
         # ─── Pass 2: Body ──────────────────────────────────────
         if body_sections:
-            job["progress"] = 45
-            job["message"] = "Generating content body (pass 2/3)..."
+            await job_store.update(job_id, progress=45, message="Generating content body (pass 2/3)...")
 
             body_result = _generate_pass(
                 template_name=template_name,
@@ -240,8 +232,7 @@ async def _run_content_generation(job_id: str, request: GenerateContentRequest):
 
         # ─── Pass 3: Links/Tags ────────────────────────────────
         if link_sections:
-            job["progress"] = 75
-            job["message"] = "Generating links and tags (pass 3/3)..."
+            await job_store.update(job_id, progress=75, message="Generating links and tags (pass 3/3)...")
 
             link_result = _generate_pass(
                 template_name=template_name,
@@ -253,8 +244,7 @@ async def _run_content_generation(job_id: str, request: GenerateContentRequest):
             generated.update(link_result)
 
         # ─── Create ContentRecord ──────────────────────────────
-        job["progress"] = 90
-        job["message"] = "Saving content record..."
+        await job_store.update(job_id, progress=90, message="Saving content record...")
 
         content_record_id = None
         try:
@@ -267,24 +257,27 @@ async def _run_content_generation(job_id: str, request: GenerateContentRequest):
         except Exception as e:
             print(f"Warning: Failed to create content record: {e}")
 
-        job["status"] = "completed"
-        job["progress"] = 100
-        job["message"] = "Content generated successfully"
-        job["result"] = {
-            "sections": generated,
-            "metadata": {
-                "template_name": template_name,
-                "content_type": content_type,
-                "passes": 3,
-                "generated_at": datetime.now().isoformat(),
+        await job_store.update(
+            job_id,
+            status="completed",
+            progress=100,
+            message="Content generated successfully",
+            result={
+                "sections": generated,
+                "metadata": {
+                    "template_name": template_name,
+                    "content_type": content_type,
+                    "passes": 3,
+                    "generated_at": datetime.now().isoformat(),
+                },
+                "content_record_id": content_record_id,
             },
-            "content_record_id": content_record_id,
-        }
+        )
 
     except Exception as e:
-        _generation_jobs[job_id]["status"] = "failed"
-        _generation_jobs[job_id]["message"] = str(e)
-        print(f"Content generation failed for job {job_id}: {e}")
+        import logging
+        logging.getLogger("api.templates").exception("Content generation failed for job %s", job_id)
+        await job_store.update(job_id, status="failed", message=str(e))
 
 
 def _generate_pass(

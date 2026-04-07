@@ -116,6 +116,13 @@ async def lifespan(app: FastAPI):
         print(f"⚠ AffiliateLink migration failed (non-critical): {e}")
 
     try:
+        from api.services.job_store import job_store
+        await job_store.ensure_table()
+        print("✅ Jobs table ensured")
+    except Exception as e:
+        print(f"⚠ Jobs table migration failed (non-critical): {e}")
+
+    try:
         from api.services.analytics_store import analytics_store
         if analytics_store.db_client:
             await analytics_store.ensure_pageview_table()
