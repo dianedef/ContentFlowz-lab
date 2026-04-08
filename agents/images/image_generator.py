@@ -2,7 +2,6 @@
 Image Generator Agent
 Generates images using Robolly API based on strategy briefs
 """
-from crewai import Agent, Task
 from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime
@@ -25,103 +24,6 @@ from agents.images.config.image_config import ROBOLLY_CONFIG
 logger = logging.getLogger(__name__)
 
 
-def create_image_generator(llm_model: str = "gpt-4o-mini") -> Agent:
-    """
-    Create the Image Generator Agent.
-
-    This agent generates images using Robolly API:
-    - Takes image briefs from Strategist
-    - Calls Robolly API with appropriate templates
-    - Validates generated images
-    - Handles retries on failures
-
-    Args:
-        llm_model: LLM model to use for reasoning
-
-    Returns:
-        Configured CrewAI Agent
-    """
-    return Agent(
-        role="Image Generation Specialist",
-        goal="Generate high-quality images using Robolly API based on provided briefs",
-        backstory="""You are an expert in automated image generation using template-based
-        APIs. You understand:
-        - How to work with Robolly's template system
-        - Best practices for text overlays and composition
-        - Importance of brand consistency
-        - Error handling and retry strategies for API calls
-
-        You take image briefs and transform them into API calls, ensuring:
-        - Templates are correctly selected
-        - Text is properly formatted for overlays
-        - Style guides are applied consistently
-        - Generated images are validated for quality
-
-        You handle failures gracefully with retries and always validate
-        that generated images meet quality standards before passing them on.""",
-        tools=[
-            generate_robolly_image,
-            validate_robolly_image,
-            get_robolly_templates
-        ],
-        verbose=True,
-        allow_delegation=False
-    )
-
-
-def create_generation_task(
-    agent: Agent,
-    image_briefs: List[Dict[str, Any]],
-    style_guide: str = "brand_primary"
-) -> Task:
-    """
-    Create a generation task for the Image Generator.
-
-    Args:
-        agent: The Image Generator agent
-        image_briefs: List of image briefs to generate
-        style_guide: Style guide to apply
-
-    Returns:
-        CrewAI Task for image generation
-    """
-    briefs_text = "\n".join([
-        f"- Type: {b['image_type']}, Title: {b['title_text']}, Template: {b.get('template_id', 'default')}"
-        for b in image_briefs
-    ])
-
-    return Task(
-        description=f"""Generate images based on the following briefs using Robolly API.
-
-**Style Guide:** {style_guide}
-
-**Image Briefs:**
-{briefs_text}
-
-**Your Tasks:**
-1. For each brief, call the Robolly API with the appropriate template
-2. Apply the {style_guide} style guide for consistent branding
-3. Validate each generated image is accessible
-4. Track generation time and file sizes
-5. Retry failed generations up to 3 times
-
-**Quality Requirements:**
-- All images must be successfully generated
-- All images must pass validation (accessible, correct format)
-- Hero images should be 1200x630px
-- Section images should be 800x450px
-- OG cards should be 1200x630px""",
-        agent=agent,
-        expected_output="""List of GeneratedImage objects for each brief:
-- robolly_render_id: Unique render ID
-- original_url: URL to generated image
-- dimensions: Width and height
-- format: Image format (jpg, webp)
-- generation_time_ms: Time taken
-- validation_status: Pass/fail"""
-    )
-
-
 class ImageGenerator:
     """
     High-level interface for the Image Generator agent.
@@ -129,7 +31,6 @@ class ImageGenerator:
     """
 
     def __init__(self, llm_model: str = "gpt-4o-mini"):
-        self.agent = create_image_generator(llm_model)
         self.llm_model = llm_model
 
     def generate_from_brief(

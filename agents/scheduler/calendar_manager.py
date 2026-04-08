@@ -10,7 +10,6 @@ Responsibilities:
 - Generate visual calendar views
 """
 from typing import List, Optional, Dict, Any
-from crewai import Agent
 from dotenv import load_dotenv
 import os
 
@@ -43,40 +42,6 @@ class CalendarManagerAgent:
         self.calendar_analyzer = CalendarAnalyzer()
         self.queue_manager = QueueManager()
         self.time_optimizer = TimeOptimizer()
-
-        # Create agent
-        self.agent = self._create_agent()
-
-    def _create_agent(self) -> Agent:
-        """Create the CrewAI Calendar Manager Agent"""
-        return Agent(
-            role="Content Calendar Manager",
-            goal=(
-                "Optimize content publishing schedules by analyzing historical patterns, "
-                "managing the content queue efficiently, and determining optimal publishing times "
-                "that maximize audience engagement while maintaining consistent content cadence."
-            ),
-            backstory=(
-                "You are an expert content calendar manager with deep understanding of "
-                "audience behavior patterns, publishing strategies, and editorial planning. "
-                "You analyze historical publishing data to identify trends, manage content backlogs, "
-                "and ensure optimal timing for maximum reach and engagement. You excel at "
-                "detecting conflicts, balancing priorities, and creating efficient publishing schedules "
-                "that align with both audience preferences and content goals."
-            ),
-            tools=[
-                self.calendar_analyzer.analyze_publishing_history,
-                self.calendar_analyzer.get_publishing_statistics,
-                self.queue_manager.add_to_queue,
-                self.queue_manager.get_queue_status,
-                self.queue_manager.detect_scheduling_conflicts,
-                self.time_optimizer.calculate_optimal_time,
-                self.time_optimizer.generate_calendar_view
-            ],
-            llm=self.llm_model,  # CrewAI uses LiteLLM internally
-            verbose=True,
-            allow_delegation=False
-        )
 
     def schedule_content(
         self,

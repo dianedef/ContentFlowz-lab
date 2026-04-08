@@ -2,7 +2,6 @@
 CDN Manager Agent
 Uploads images to Bunny.net CDN and manages delivery
 """
-from crewai import Agent, Task
 from typing import Dict, Any, List, Optional
 import re
 import logging
@@ -32,105 +31,6 @@ from agents.images.config.image_config import BUNNY_CONFIG
 logger = logging.getLogger(__name__)
 
 
-def create_cdn_manager(llm_model: str = "gpt-4o-mini") -> Agent:
-    """
-    Create the CDN Manager Agent.
-
-    This agent manages CDN operations:
-    - Uploads optimized images to Bunny.net Storage
-    - Verifies CDN propagation
-    - Generates final CDN URLs
-    - Inserts images into article markdown
-
-    Args:
-        llm_model: LLM model to use for reasoning
-
-    Returns:
-        Configured CrewAI Agent
-    """
-    return Agent(
-        role="CDN Deployment Specialist",
-        goal="Deploy images to Bunny.net CDN and integrate them into article content",
-        backstory="""You are an expert in CDN management and content delivery with expertise in:
-        - Bunny.net Storage and CDN APIs
-        - Content delivery optimization
-        - Cache management and invalidation
-        - Markdown content manipulation
-
-        You ensure images are:
-        - Properly uploaded to CDN storage
-        - Verified for global accessibility
-        - Correctly integrated into article markdown
-        - Optimized for delivery with proper cache headers
-
-        You understand the importance of:
-        - Verifying CDN propagation before considering upload complete
-        - Using proper file paths for organization
-        - Generating accessible and cacheable URLs
-        - Integrating images with proper markdown syntax and alt text""",
-        tools=[
-            upload_to_bunny_storage,
-            verify_cdn_propagation,
-            purge_cdn_cache,
-            get_cdn_url
-        ],
-        verbose=True,
-        allow_delegation=False
-    )
-
-
-def create_deployment_task(
-    agent: Agent,
-    image_sets: List[Dict[str, Any]],
-    article_content: str,
-    path_type: str = "articles"
-) -> Task:
-    """
-    Create a deployment task for the CDN Manager.
-
-    Args:
-        agent: The CDN Manager agent
-        image_sets: List of ResponsiveImageSet dicts
-        article_content: Original article markdown
-        path_type: CDN path type
-
-    Returns:
-        CrewAI Task for CDN deployment
-    """
-    images_text = "\n".join([
-        f"- {img['file_name']}: {len(img.get('variants', []))} variants"
-        for img in image_sets
-    ])
-
-    return Task(
-        description=f"""Deploy the following optimized images to Bunny.net CDN.
-
-**Images to Deploy:**
-{images_text}
-
-**CDN Path Type:** {path_type}
-
-**Your Tasks:**
-1. Upload each image variant to Bunny.net Storage
-2. Verify CDN propagation for each uploaded image
-3. Generate final CDN URLs
-4. Insert images into article markdown at appropriate positions
-5. Generate srcset markup for responsive images
-
-**Integration Requirements:**
-- Hero image should be at the top of the article
-- Section images should follow their respective headings
-- All images must have proper alt text
-- Use lazy loading for below-fold images""",
-        agent=agent,
-        expected_output="""Deployment results:
-- cdn_urls: List of all uploaded CDN URLs
-- markdown_with_images: Updated article content with images
-- upload_results: Status of each upload
-- total_cdn_size_kb: Total storage used"""
-    )
-
-
 class CDNManager:
     """
     High-level interface for the CDN Manager agent.
@@ -142,7 +42,6 @@ class CDNManager:
     """
 
     def __init__(self, llm_model: str = "gpt-4o-mini"):
-        self.agent = create_cdn_manager(llm_model)
         self.llm_model = llm_model
         self._optimizer_config = BUNNY_CONFIG.get("optimizer", {})
         self._optimizer_verified = None  # Cache verification result

@@ -2,6 +2,15 @@
 
 All notable changes to Content Flows are documented here.
 
+## [2026-04-08]
+
+### Removed
+- **Dead CrewAI objects in Scheduler and Images pipelines** — removed 5 unused `from crewai import` statements, 8 unused `Agent()`/`Task()` factory functions (`create_image_strategist`, `create_strategy_task`, `create_image_generator`, `create_generation_task`, `create_image_optimizer`, `create_optimization_task`, `create_cdn_manager`, `create_deployment_task`), 4 `_create_agent()` methods, and 8 `self.agent = ...` assignments that were created and immediately ignored (-631 lines)
+
+### Changed
+- **Renamed `SchedulerCrew` → `SchedulerPipeline`** and **`ImageRobotCrew` → `ImagePipeline`** to reflect their true nature as deterministic Python pipelines, not LLM-orchestrated crews (`scheduler_crew.py`, `image_crew.py`, `agents/images/__init__.py`, `api/dependencies/`, `api/routers/images.py`, example files)
+- **`get_image_robot_crew` → `get_image_pipeline`** in FastAPI dependency injection
+
 ## [2026-04-07]
 
 ### Security

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from agents.seo.topical_mesh_architect import TopicalMeshArchitect
     from agents.seo.research_analyst import ResearchAnalystAgent
     from agents.seo.content_strategist import ContentStrategistAgent
-    from agents.images.image_crew import ImageRobotCrew
+    from agents.images.image_crew import ImagePipeline
 
 
 @lru_cache()
@@ -51,15 +51,15 @@ def get_content_strategist() -> "ContentStrategistAgent":
 
 
 @lru_cache()
-def get_image_robot_crew() -> "ImageRobotCrew":
+def get_image_pipeline() -> "ImagePipeline":
     """
-    Get or create ImageRobotCrew singleton (lazy import).
+    Get or create ImagePipeline singleton (lazy import).
 
-    The Image Robot Crew orchestrates 4 specialized agents:
+    Coordinates 4 specialized components:
     - Image Strategist: Analyzes content and plans visual strategy
     - Image Generator: Creates images via Robolly API
     - Image Optimizer: Compresses and creates responsive variants
     - CDN Manager: Uploads to Bunny.net and integrates with content
     """
-    from agents.images.image_crew import ImageRobotCrew
-    return ImageRobotCrew()
+    from agents.images.image_crew import ImagePipeline
+    return ImagePipeline()

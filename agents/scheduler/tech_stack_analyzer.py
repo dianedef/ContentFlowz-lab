@@ -11,7 +11,6 @@ Responsibilities:
 - Generate tech health reports
 """
 from typing import List, Optional, Dict, Any
-from crewai import Agent
 from dotenv import load_dotenv
 import os
 
@@ -49,42 +48,6 @@ class TechStackAnalyzerAgent:
         self.vulnerability_scanner = VulnerabilityScanner(project_path=project_path)
         self.build_analyzer = BuildAnalyzer(project_path=project_path)
         self.cost_tracker = CostTracker()
-
-        # Create agent
-        self.agent = self._create_agent()
-
-    def _create_agent(self) -> Agent:
-        """Create the CrewAI Tech Stack Analyzer Agent"""
-        return Agent(
-            role="Infrastructure & DevOps Analyst",
-            goal=(
-                "Monitor and optimize the project's tech stack, dependencies, and infrastructure. "
-                "Identify security vulnerabilities, outdated packages, build performance issues, "
-                "and cost optimization opportunities. Maintain zero critical vulnerabilities and "
-                "provide actionable recommendations for technical improvements."
-            ),
-            backstory=(
-                "You are an experienced DevOps engineer and infrastructure specialist with deep "
-                "expertise in dependency management, security auditing, build optimization, and "
-                "cost analysis. You've worked with various tech stacks including Node.js, Python, "
-                "and modern frameworks like Astro and Next.js. You have a keen eye for spotting "
-                "vulnerabilities before they become security incidents, and you excel at optimizing "
-                "build pipelines for speed and efficiency. You track infrastructure costs religiously "
-                "and always find ways to reduce spending without sacrificing performance. Your audits "
-                "are thorough, prioritized, and always include clear action items."
-            ),
-            tools=[
-                self.dependency_analyzer.analyze_dependencies,
-                self.dependency_analyzer.check_sitemap_plugin,
-                self.vulnerability_scanner.scan_vulnerabilities,
-                self.build_analyzer.analyze_build,
-                self.cost_tracker.track_costs,
-                self.cost_tracker.get_cost_summary
-            ],
-            llm=self.llm_model,  # CrewAI uses LiteLLM internally
-            verbose=True,
-            allow_delegation=False
-        )
 
     def run_full_analysis(self) -> Dict[str, Any]:
         """

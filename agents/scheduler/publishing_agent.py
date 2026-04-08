@@ -11,7 +11,6 @@ Responsibilities:
 - Track publishing analytics
 """
 from typing import List, Optional, Dict, Any
-from crewai import Agent
 from dotenv import load_dotenv
 import os
 
@@ -45,42 +44,6 @@ class PublishingAgent:
         self.git_deployer = GitDeployer()
         self.google_integration = GoogleIntegration()
         self.deployment_monitor = DeploymentMonitor()
-
-        # Create agent
-        self.agent = self._create_agent()
-
-    def _create_agent(self) -> Agent:
-        """Create the CrewAI Publishing Agent"""
-        return Agent(
-            role="Content Publishing Specialist",
-            goal=(
-                "Deploy content to production reliably and efficiently, integrate with "
-                "Google Search Console and Indexing API for maximum visibility, monitor "
-                "deployment health, and handle rollbacks when necessary. Ensure 99.9% uptime "
-                "and <24 hour indexing for all published content."
-            ),
-            backstory=(
-                "You are an expert DevOps and publishing specialist with deep knowledge of "
-                "Git workflows, CI/CD pipelines, and search engine integration. You have "
-                "years of experience deploying content at scale, managing Google Search Console, "
-                "and optimizing for fast indexing. You're meticulous about monitoring, logging, "
-                "and quickly resolving deployment issues. Your deployments are known for their "
-                "reliability and you take pride in maintaining perfect uptime records."
-            ),
-            tools=[
-                self.git_deployer.deploy_to_production,
-                self.git_deployer.rollback_deployment,
-                self.google_integration.submit_to_google_search_console,
-                self.google_integration.trigger_google_indexing,
-                self.google_integration.check_indexing_status,
-                self.deployment_monitor.monitor_deployment,
-                self.deployment_monitor.log_deployment,
-                self.deployment_monitor.get_deployment_history
-            ],
-            llm=self.llm_model,  # CrewAI uses LiteLLM internally
-            verbose=True,
-            allow_delegation=False
-        )
 
     def publish_content(
         self,

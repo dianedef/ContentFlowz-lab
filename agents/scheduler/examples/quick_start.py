@@ -2,7 +2,7 @@
 Scheduling Robot - Quick Start Examples
 Demonstrates basic usage of the Scheduling Robot
 """
-from agents.scheduler.scheduler_crew import create_scheduler_crew
+from agents.scheduler.scheduler_crew import create_scheduler_pipeline
 import json
 
 
@@ -11,7 +11,7 @@ def main():
 
     # Create scheduler crew
     print("Initializing Scheduling Robot...")
-    crew = create_scheduler_crew(
+    crew = create_scheduler_pipeline(
         llm_model="mixtral-8x7b-32768",
         base_url="http://localhost:3000",
         project_path="/root/contentflowz-lab"

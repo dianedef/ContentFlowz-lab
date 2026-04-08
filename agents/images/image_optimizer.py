@@ -2,7 +2,6 @@
 Image Optimizer Agent
 Compresses and creates responsive variants of generated images
 """
-from crewai import Agent, Task
 from typing import Dict, Any, List, Optional, Union
 import os
 import logging
@@ -30,111 +29,6 @@ from agents.images.config.image_config import IMAGE_PROCESSING_CONFIG, BUNNY_CON
 logger = logging.getLogger(__name__)
 
 
-def create_image_optimizer(llm_model: str = "gpt-4o-mini") -> Agent:
-    """
-    Create the Image Optimizer Agent.
-
-    This agent optimizes images for web performance:
-    - Compresses images while maintaining quality
-    - Converts to modern formats (WebP, AVIF)
-    - Generates responsive variants at multiple sizes
-    - Ensures images meet size targets
-
-    Args:
-        llm_model: LLM model to use for reasoning
-
-    Returns:
-        Configured CrewAI Agent
-    """
-    return Agent(
-        role="Image Optimization Specialist",
-        goal="Optimize images for web performance while maintaining visual quality",
-        backstory="""You are an expert in web image optimization with deep knowledge of:
-        - Modern image formats (WebP, AVIF) and their benefits
-        - Compression algorithms and quality/size tradeoffs
-        - Responsive images and srcset/sizes attributes
-        - Core Web Vitals and their impact on SEO
-
-        You understand that image optimization is critical for:
-        - Fast page load times (LCP optimization)
-        - Reduced bandwidth costs
-        - Better user experience, especially on mobile
-        - Improved SEO rankings
-
-        You always balance quality against file size, knowing that:
-        - Hero images can be slightly larger for visual impact
-        - Section images should be smaller for fast loading
-        - Mobile variants need aggressive optimization
-        - WebP provides excellent quality at smaller sizes""",
-        tools=[
-            compress_image,
-            convert_to_webp,
-            generate_responsive_variants,
-            calculate_image_hash
-        ],
-        verbose=True,
-        allow_delegation=False
-    )
-
-
-def create_optimization_task(
-    agent: Agent,
-    images: List[Dict[str, Any]],
-    generate_responsive: bool = True
-) -> Task:
-    """
-    Create an optimization task for the Image Optimizer.
-
-    Args:
-        agent: The Image Optimizer agent
-        images: List of generated images to optimize
-        generate_responsive: Whether to generate responsive variants
-
-    Returns:
-        CrewAI Task for image optimization
-    """
-    images_text = "\n".join([
-        f"- {img['image_type']}: {img['original_url']} ({img.get('file_size_bytes', 0) / 1024:.1f}KB)"
-        for img in images
-    ])
-
-    return Task(
-        description=f"""Optimize the following generated images for web performance.
-
-**Images to Optimize:**
-{images_text}
-
-**Generate Responsive Variants:** {generate_responsive}
-
-**Your Tasks:**
-1. Download each image to temporary storage
-2. Compress images to meet size targets
-3. Convert to WebP format for modern browsers
-4. {"Generate responsive variants at multiple sizes" if generate_responsive else "Skip responsive variants"}
-5. Calculate file hashes for cache busting
-6. Generate SEO-friendly filenames
-
-**Size Targets:**
-- Hero images: <150KB
-- Section images: <80KB
-- OG cards: <100KB
-- Thumbnails: <30KB
-
-**Quality Requirements:**
-- Maintain visual quality (min 70% quality)
-- WebP format preferred
-- Generate srcset for responsive images""",
-        agent=agent,
-        expected_output="""List of OptimizedImage objects for each variant:
-- format: Output format (webp, jpg)
-- width/height: Dimensions
-- file_size_bytes: Optimized size
-- compression_ratio: vs original
-- file_hash: MD5 hash
-- local_path: Temporary file path"""
-    )
-
-
 class ImageOptimizer:
     """
     High-level interface for the Image Optimizer agent.
@@ -149,7 +43,6 @@ class ImageOptimizer:
         llm_model: str = "gpt-4o-mini",
         temp_dir: Optional[str] = None
     ):
-        self.agent = create_image_optimizer(llm_model)
         self.llm_model = llm_model
         self.temp_dir = temp_dir or tempfile.mkdtemp(prefix="image-robot-")
         Path(self.temp_dir).mkdir(parents=True, exist_ok=True)

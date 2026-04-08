@@ -30,7 +30,7 @@
 | 🟠 | In-memory state lost on restart (deployment, templates) | `api/routers/deployment.py`, `api/routers/templates.py` | Open |
 | 🟠 | Loose dependency pins (`>=` with no upper bound) | `requirements.txt` | **FIXED** |
 | 🟠 | God file: 3512 lines, 140 functions | `agents/seo/tools/internal_linking/` | **FIXED** |
-| 🟡 | No CI/CD pipeline to run existing tests | Project-wide | Open |
+| 🟡 | No CI/CD pipeline to run existing tests | Project-wide | Deferred — tests need API keys, no value until pure unit tests exist |
 | 🟡 | Multiple 500+ line files (8 files over 500 lines) | `ingest.py`, `dataforseo_client.py`, `status/service.py`, etc. | Open |
 | 🟡 | No structured logging for production | Project-wide | **FIXED** |
 | 🟡 | No rate limiting on any endpoint | `api/main.py` | **FIXED** |
@@ -100,9 +100,9 @@ Audit complet du code des agents dans `agents/`. Sur ~21 agents définis, enviro
 
 ---
 
-#### P0.2 — Assumer les faux agents comme pipelines Python
+#### P0.2 — Assumer les faux agents comme pipelines Python ✅
 
-- [ ] **Nettoyer la confusion sémantique agents/pipelines**
+- [x] **Nettoyer la confusion sémantique agents/pipelines**
 
 **Problème :** Les agents Scheduler (`agents/scheduler/scheduler_crew.py`) et Images (`agents/images/image_robot_crew.py`) instancient des objets `Agent()` CrewAI avec `role`/`goal`/`backstory` mais ne font JAMAIS `crew.kickoff()`. Ce sont des scripts Python classiques déguisés en "agents IA". Les méthodes sont appelées directement :
 ```python

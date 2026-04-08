@@ -9,7 +9,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from agents.images import ImageRobotCrew, create_image_robot_crew
+from agents.images import ImagePipeline, create_image_pipeline
 from agents.images.config.image_config import ImageConfig
 
 
@@ -44,7 +44,7 @@ def example_single_article():
     print("="*60)
 
     # Create crew
-    crew = create_image_robot_crew()
+    crew = create_image_pipeline()
 
     # Sample article content
     article = """---
@@ -119,7 +119,7 @@ def example_quick_hero_only():
     print("Example: Quick Hero-Only Processing")
     print("="*60)
 
-    crew = create_image_robot_crew()
+    crew = create_image_pipeline()
 
     article = """# Quick Update: New Feature Released
 
@@ -147,7 +147,7 @@ def example_rich_content():
     print("Example: Rich Content with Section Images")
     print("="*60)
 
-    crew = create_image_robot_crew()
+    crew = create_image_pipeline()
 
     # Long article with many sections
     article = """---
@@ -250,7 +250,7 @@ The future is autonomous and intelligent.
     generated_article = MockGeneratedArticle()
 
     # Image Robot processes the article
-    crew = create_image_robot_crew()
+    crew = create_image_pipeline()
 
     result = crew.process(
         article_content=generated_article.content,

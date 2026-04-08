@@ -1,15 +1,17 @@
 """
-Scheduler Robot - Multi-Agent Content Publishing and Analysis System
-Orchestrates 4 specialized agents for automated content scheduling, publishing,
+Scheduler Pipeline - Deterministic content publishing and analysis system.
+Coordinates 4 specialized components for automated content scheduling, publishing,
 and technical analysis of the site and infrastructure.
 
-Agents:
+This is a Python pipeline, not a CrewAI Crew — components are called directly
+without LLM orchestration.
+
+Components:
 1. Calendar Manager - Scheduling optimization and queue management
 2. Publishing Agent - Content deployment and Google integration
-3. Technical SEO Analyzer - Site health and SEO auditing
+3. Site Health Monitor - SEO auditing
 4. Tech Stack Analyzer - Infrastructure and dependency analysis
 """
-from crewai import Crew, Task, Process
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import json
@@ -30,9 +32,10 @@ except ImportError:
     STATUS_AVAILABLE = False
 
 
-class SchedulerCrew:
+class SchedulerPipeline:
     """
-    Scheduler Robot Crew orchestrating content publishing and analysis workflows
+    Deterministic pipeline for content publishing and analysis workflows.
+    Calls component methods directly — no LLM orchestration.
     """
 
     def __init__(
@@ -411,13 +414,13 @@ class SchedulerCrew:
             json.dump(report, f, indent=2, default=str)
 
 
-def create_scheduler_crew(
+def create_scheduler_pipeline(
     llm_model: str = "mixtral-8x7b-32768",
     base_url: str = "http://localhost:3000",
     project_path: str = "/root/contentflowz-lab"
-) -> SchedulerCrew:
+) -> SchedulerPipeline:
     """
-    Factory function to create Scheduler Crew.
+    Factory function to create the Scheduler Pipeline.
 
     Args:
         llm_model: LLM model for all agents
@@ -425,9 +428,9 @@ def create_scheduler_crew(
         project_path: Project directory path
 
     Returns:
-        Initialized SchedulerCrew instance
+        Initialized SchedulerPipeline instance
     """
-    return SchedulerCrew(
+    return SchedulerPipeline(
         llm_model=llm_model,
         base_url=base_url,
         project_path=project_path
@@ -437,7 +440,7 @@ def create_scheduler_crew(
 # Example usage
 if __name__ == "__main__":
     # Create scheduler crew
-    crew = create_scheduler_crew()
+    crew = create_scheduler_pipeline()
 
     # Run quick health check
     health = crew.quick_health_check()

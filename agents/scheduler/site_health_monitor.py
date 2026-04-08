@@ -14,7 +14,6 @@ Uses On-Page Technical SEO Agent to analyze individual pages.
 Note: For optimizing NEW content, see seo/on_page_technical_seo.py
 """
 from typing import List, Optional, Dict, Any
-from crewai import Agent
 from dotenv import load_dotenv
 import os
 
@@ -62,44 +61,6 @@ class SiteHealthMonitorAgent:
         # Initialize On-Page SEO tools for individual page analysis
         self.schema_validator = SchemaGenerator()  # For validation
         self.metadata_validator = MetadataValidator()
-
-        # Create agent
-        self.agent = self._create_agent()
-
-    def _create_agent(self) -> Agent:
-        """Create the CrewAI Site Health Monitor Agent"""
-        return Agent(
-            role="Site Health Monitor & SEO Auditor",
-            goal=(
-                "Perform comprehensive site-wide SEO audits to identify and resolve issues "
-                "affecting crawlability, indexability, performance, and user experience. "
-                "Maintain >90 technical SEO score with zero critical issues. Provide "
-                "actionable recommendations backed by data and industry best practices."
-            ),
-            backstory=(
-                "You are a world-class technical SEO specialist with expertise in site "
-                "architecture, schema markup, Core Web Vitals, and search engine crawling. "
-                "You've optimized thousands of websites for maximum search visibility and "
-                "have deep understanding of how search engines crawl, render, and index content. "
-                "You stay current with Google's algorithm updates and ranking factors, and "
-                "excel at translating complex technical issues into clear, actionable fixes. "
-                "Your audits are thorough, data-driven, and result in measurable improvements."
-            ),
-            tools=[
-                self.site_crawler.crawl_site,
-                self.site_crawler.detect_broken_links,
-                self.performance_analyzer.check_page_speed,
-                self.performance_analyzer.measure_core_web_vitals,
-                self.link_analyzer.analyze_internal_links,
-                self.link_analyzer.find_redirect_chains,
-                self.sitemap_monitor.check_sitemap_health,
-                self.sitemap_monitor.check_sitemap_coverage,
-                self.sitemap_monitor.check_all_sites_sitemaps,
-            ],
-            llm=self.llm_model,  # CrewAI uses LiteLLM internally
-            verbose=True,
-            allow_delegation=False
-        )
 
     def analyze_page_seo(self, url: str, content: str) -> Dict[str, Any]:
         """

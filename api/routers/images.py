@@ -34,14 +34,14 @@ from api.models.images import (
     GenerateImageFromProfileResponse,
 )
 from api.dependencies.auth import require_current_user
-from api.dependencies import get_image_robot_crew
+from api.dependencies import get_image_pipeline
 from api.services.ai_image_generation import generate_openai_image_to_file
 from api.services.image_profiles import ImageProfileStore
 from agents.seo.config.project_store import project_store
 
 # Type hint only - not loaded at runtime
 if TYPE_CHECKING:
-    from agents.images.image_crew import ImageRobotCrew
+    from agents.images.image_crew import ImagePipeline
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def _sanitize_project_id(project_id: str) -> str:
 
 
 async def _get_project_scoped_data_dir(
-    crew: "ImageRobotCrew",
+    crew: "ImagePipeline",
     project_id: str,
 ) -> Path:
     """Resolve and ensure per-project image data directory."""
@@ -212,7 +212,7 @@ def _build_ai_prompt(
 )
 async def generate_images(
     request: GenerateImagesRequest,
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> GenerateImagesResponse:
     """Generate images for an article via Image Robot Crew"""
     start_time = time.time()
@@ -316,7 +316,7 @@ async def generate_images(
 )
 async def upload_image(
     request: UploadImageRequest,
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> UploadImageResponse:
     """Upload a single image with optimization"""
     try:
@@ -377,7 +377,7 @@ async def upload_image(
 )
 async def get_optimizer_status(
     test_url: str = None,
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> OptimizerStatusResponse:
     """Check Bunny Optimizer configuration and status"""
     try:
@@ -446,7 +446,7 @@ async def get_generation_history(
         default=None,
         description="Optional project id for project-scoped history",
     ),
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> ImageRobotHistoryResponse:
     """Get recent image generation history"""
     try:
@@ -501,7 +501,7 @@ async def list_image_profiles(
         ...,
         description="Project id used to scope image profiles",
     ),
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> ListImageProfilesResponse:
     """List available image profiles (system + custom)."""
     try:
@@ -535,7 +535,7 @@ async def upsert_image_profile(
         ...,
         description="Project id used to scope image profiles",
     ),
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> ImageProfileData:
     """Create or update a custom profile."""
     try:
@@ -569,7 +569,7 @@ async def delete_image_profile(
         ...,
         description="Project id used to scope image profiles",
     ),
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> Dict[str, Any]:
     """Delete a custom profile."""
     try:
@@ -602,7 +602,7 @@ async def delete_image_profile(
 )
 async def generate_image_from_profile(
     request: GenerateImageFromProfileRequest,
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> GenerateImageFromProfileResponse:
     """Generate one image from a saved profile."""
     try:
@@ -795,7 +795,7 @@ async def generate_image_from_profile(
 )
 async def quick_generate_images(
     request: GenerateImagesRequest,
-    crew: "ImageRobotCrew" = Depends(get_image_robot_crew)
+    crew: "ImagePipeline" = Depends(get_image_pipeline)
 ) -> GenerateImagesResponse:
     """Quick image generation (hero only, no responsive)"""
     start_time = time.time()

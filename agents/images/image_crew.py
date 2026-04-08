@@ -1,7 +1,10 @@
 """
-Image Robot Crew - Multi-Agent Image Generation and CDN Management System
-Orchestrates 4 specialized agents for automated image generation, optimization,
+Image Pipeline - Deterministic image generation and CDN management system.
+Coordinates 4 specialized components for automated image generation, optimization,
 and CDN deployment for blog articles.
+
+This is a Python pipeline, not a CrewAI Crew — components are called directly
+without LLM orchestration.
 
 Workflow:
 1. Image Strategist - Analyzes article and creates visual strategy
@@ -42,11 +45,12 @@ except ImportError:
     STATUS_AVAILABLE = False
 
 
-class ImageRobotCrew:
+class ImagePipeline:
     """
-    Image Robot Crew orchestrating image generation and CDN workflows.
+    Deterministic pipeline for image generation and CDN workflows.
+    Calls component methods directly — no LLM orchestration.
 
-    This crew coordinates 4 specialized agents:
+    Components:
     - Image Strategist: Analyzes content and plans visual strategy
     - Image Generator: Creates images via Robolly API
     - Image Optimizer: Compresses and creates responsive variants
@@ -477,21 +481,21 @@ class ImageRobotCrew:
         }
 
 
-def create_image_robot_crew(
+def create_image_pipeline(
     llm_model: str = "gpt-4o-mini",
     project_path: str = "/root/contentflowz-lab"
-) -> ImageRobotCrew:
+) -> ImagePipeline:
     """
-    Factory function to create Image Robot Crew.
+    Factory function to create the Image Pipeline.
 
     Args:
         llm_model: LLM model for all agents
         project_path: Project directory path
 
     Returns:
-        Initialized ImageRobotCrew instance
+        Initialized ImagePipeline instance
     """
-    return ImageRobotCrew(
+    return ImagePipeline(
         llm_model=llm_model,
         project_path=project_path
     )
@@ -545,7 +549,7 @@ Start building today and join the future of automation.
 """
 
     # Create crew and process
-    crew = create_image_robot_crew()
+    crew = create_image_pipeline()
 
     print("\nProcessing article...")
     result = crew.process(
