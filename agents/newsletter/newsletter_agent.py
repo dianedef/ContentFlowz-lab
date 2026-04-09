@@ -97,20 +97,12 @@ class NewsletterAgent:
 
     def _create_agent(self) -> Agent:
         """Create the CrewAI agent."""
+        from agents.shared.prompt_loader import load_prompt
+        p = load_prompt("newsletter", "newsletter_curator")
         return Agent(
-            role="Newsletter Curator & Writer",
-            goal=(
-                "Create engaging, valuable newsletters by reading incoming emails, "
-                "analyzing competitor newsletters, researching trending topics, "
-                "and crafting compelling content for the target audience."
-            ),
-            backstory=(
-                "You are an experienced newsletter curator with expertise in "
-                "content curation, email marketing, and audience engagement. "
-                "You have a keen eye for identifying valuable content and "
-                "transforming it into engaging newsletter sections. You understand "
-                "what makes readers open, read, and act on newsletters."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=self._get_tools(),
             llm=self.llm_model,
             verbose=True,
@@ -146,18 +138,12 @@ class NewsletterResearchAgent:
         if MEMORY_AVAILABLE:
             tools.extend([recall_project_context, recall_past_newsletters])
 
+        from agents.shared.prompt_loader import load_prompt
+        p = load_prompt("newsletter", "research_analyst")
         return Agent(
-            role="Newsletter Research Analyst",
-            goal=(
-                "Analyze incoming emails and competitor newsletters to identify "
-                "trends, successful content patterns, and opportunities for "
-                "our newsletter content."
-            ),
-            backstory=(
-                "You are a research analyst specializing in email marketing. "
-                "You excel at pattern recognition, competitive analysis, and "
-                "extracting actionable insights from large volumes of content."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=tools,
             llm=self.llm_model,
             verbose=True,
@@ -185,20 +171,12 @@ class NewsletterWriterAgent:
         if MEMORY_AVAILABLE:
             tools.append(recall_brand_voice)
 
+        from agents.shared.prompt_loader import load_prompt
+        p = load_prompt("newsletter", "content_writer")
         return Agent(
-            role="Newsletter Content Writer",
-            goal=(
-                "Transform research insights and curated content into engaging, "
-                "well-structured newsletter sections that drive reader engagement."
-            ),
-            backstory=(
-                "You are a skilled copywriter with expertise in email marketing. "
-                "You write compelling subject lines, engaging intros, and content "
-                "that keeps readers scrolling. You understand email-specific "
-                "formatting and mobile-first reading patterns. When available, "
-                "you use brand voice guidelines from memory to maintain consistent "
-                "tone and style across all newsletters."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=tools,
             llm=self.llm_model,
             verbose=True,

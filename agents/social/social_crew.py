@@ -8,6 +8,7 @@ Pipeline: Two agents work together:
 import json
 from typing import Optional
 from crewai import Agent, Task, Crew, Process
+from agents.shared.prompt_loader import load_prompt
 
 # Conditional status tracking (graceful degradation)
 try:
@@ -31,38 +32,21 @@ class SocialPostCrew:
         self.llm_model = llm_model
 
     def _build_adapter_agent(self) -> Agent:
+        p = load_prompt("social", "platform_adapter")
         return Agent(
-            role="Social Media Platform Adapter",
-            goal=(
-                "Adapt content angles into platform-native social media posts. "
-                "Each post must feel native to its platform — not like a cross-post. "
-                "Twitter posts are punchy and thread-ready. LinkedIn posts are professional "
-                "and story-driven. Instagram captions are visual and emoji-rich."
-            ),
-            backstory=(
-                "You are a social media strategist who understands that each platform "
-                "has its own culture, format, and audience behavior. You never copy-paste "
-                "the same text across platforms. You write posts that feel like they "
-                "belong on the platform they're written for."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[],
             verbose=False,
         )
 
     def _build_thread_agent(self) -> Agent:
+        p = load_prompt("social", "thread_builder")
         return Agent(
-            role="Thread & Carousel Builder",
-            goal=(
-                "Structure long-form social content into engaging threads or carousels. "
-                "Each part must stand alone while building on the previous one. "
-                "The first post is the hook — it must make people want to read more."
-            ),
-            backstory=(
-                "You specialize in breaking down complex ideas into digestible social "
-                "media threads. You know that thread post #1 determines whether anyone "
-                "reads posts #2-10. You structure information for maximum engagement "
-                "and shareability."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[],
             verbose=False,
         )

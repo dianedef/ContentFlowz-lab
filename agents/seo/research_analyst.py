@@ -28,6 +28,7 @@ from agents.seo.tools.research_tools import (
 from agents.seo.config.research_config import AI_TOOL_SETTINGS
 from agents.shared.tools.exa_tools import exa_search, exa_find_similar
 from agents.shared.tools.firecrawl_tools import scrape_url, crawl_site
+from agents.shared.prompt_loader import load_prompt
 
 load_dotenv()
 
@@ -75,23 +76,11 @@ class ResearchAnalystAgent:
         if self.use_consensus_ai:
             tools.append(consensus_deep_search_tool)
             
+        p = load_prompt("seo", "research_analyst")
         return Agent(
-            role="SEO Research Analyst",
-            goal=(
-                "Conduct comprehensive competitive intelligence and identify SEO opportunities. "
-                "Analyze SERP landscapes, monitor industry trends, discover content gaps, "
-                "extract winning patterns from top-ranking content, and investigate scientific "
-                "consensus for relevant academic or medical topics."
-            ),
-            backstory=(
-                "You are an expert SEO analyst with 10+ years of experience in competitive intelligence. "
-                "You specialize in SERP analysis, keyword research, and identifying content opportunities "
-                "that drive organic traffic. Your analytical approach combines data-driven insights with "
-                "strategic thinking to uncover high-value SEO opportunities. You have a deep understanding "
-                "of search intent, ranking factors, and content strategies. Additionally, you are skilled "
-                "at synthesizing scientific literature and academic consensus to ensure content accuracy "
-                "and authority, especially for YMYL (Your Money Your Life) topics."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=tools,
             llm=self.llm_model,  # CrewAI uses LiteLLM internally
             verbose=True,
@@ -117,70 +106,38 @@ class ResearchAnalystAgent:
         Returns:
             CrewAI Task configured for research analysis
         """
-        description = f"""
-        Conduct a comprehensive SEO competitive analysis for the keyword: "{target_keyword}"
-        
-        Your analysis must include:
-        
-        1. SERP ANALYSIS:
-           - Analyze search results for "{target_keyword}"
-           - Identify top 10 competitors and their positioning
-           - Determine search intent (Informational, Commercial, Transactional, Navigational)
-           - Evaluate competitive difficulty
-           - Note any featured snippets or SERP features
-        
-        2. SCIENTIFIC CONSENSUS (If Applicable):
-           - If the topic is scientific, medical, or academic, use the Consensus Deep Search tool.
-           - Identify the current scientific consensus and key findings from peer-reviewed literature.
-           - This is critical for YMYL topics to ensure E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness).
-        
-        3. RANKING PATTERNS:
-           - Extract success patterns from top-ranking content
-           - Analyze content length, structure, and topics covered
-           - Identify key ranking factors
-           - Determine success probability for new content
-        """
-        
+        competitor_section = ""
         if competitor_domains:
-            description += f"""
-        3. KEYWORD GAP ANALYSIS:
-           - Compare against competitors: {', '.join(competitor_domains)}
-           - Identify keyword opportunities where competitors rank but target domain doesn't
-           - Prioritize gaps by opportunity score
-           - Suggest content types for each gap
-        """
-        
+            competitor_section = (
+                f"\n      3. KEYWORD GAP ANALYSIS:\n"
+                f"         - Compare against competitors: {', '.join(competitor_domains)}\n"
+                f"         - Identify keyword opportunities where competitors rank but target domain doesn't\n"
+                f"         - Prioritize gaps by opportunity score\n"
+                f"         - Suggest content types for each gap\n"
+            )
+
+        sector_section = ""
         if sector:
-            description += f"""
-        4. TREND MONITORING:
-           - Monitor trends in {sector} sector
-           - Identify emerging keywords and topics
-           - Detect seasonal patterns
-           - Provide strategic recommendations
-        """
-        
-        description += """
-        
-        DELIVERABLE FORMAT:
-        Provide a structured markdown report with:
-        - Executive Summary (2-3 sentences)
-        - SERP Analysis findings
-        - Scientific Consensus & Evidence (if applicable)
-        - Ranking Patterns and success factors
-        - Keyword Gap opportunities (if applicable)
-        - Trend insights (if applicable)
-        - Strategic Recommendations (prioritized list)
-        
-        Use data-driven insights and be specific with metrics.
-        """
-        
+            sector_section = (
+                f"\n      4. TREND MONITORING:\n"
+                f"         - Monitor trends in {sector} sector\n"
+                f"         - Identify emerging keywords and topics\n"
+                f"         - Detect seasonal patterns\n"
+                f"         - Provide strategic recommendations\n"
+            )
+
+        p = load_prompt("seo", "research_analyst")
+        task_cfg = p["tasks"]["analysis"]
+        description = task_cfg["description"].format(
+            target_keyword=target_keyword,
+            competitor_section=competitor_section,
+            sector_section=sector_section,
+        )
+
         return Task(
             description=description,
             agent=self.agent,
-            expected_output=(
-                "A comprehensive SEO competitive analysis report in markdown format with "
-                "SERP insights, ranking patterns, keyword opportunities, and actionable recommendations."
-            )
+            expected_output=task_cfg["expected_output"],
         )
     
     def run_analysis(

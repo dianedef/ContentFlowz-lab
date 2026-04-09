@@ -24,6 +24,7 @@ from agents.seo.tools.internal_linking import (
 )
 
 from agents.seo.tools.local_link_checker import LocalLinkChecker
+from agents.shared.prompt_loader import load_prompt
 
 from agents.seo.config.internal_linking_config import (
     InternalLinkingConfiguration,
@@ -72,23 +73,11 @@ class InternalLinkingSpecialistAgent:
     
     def _create_agent(self) -> Agent:
         """Create the Internal Linking Specialist CrewAI agent with tools."""
+        p = load_prompt("seo", "internal_linking_specialist")
         return Agent(
-            role="Internal Linking Specialist",
-            goal=(
-                "Optimize internal linking strategy to maximize both SEO authority and conversion rates. "
-                "Balance 50% new link opportunities with 50% existing link optimization. "
-                "Prioritize conversion paths while maintaining SEO value. "
-                "Deliver personalized user experiences through progressive profiling."
-            ),
-            backstory=(
-                "You are an expert in both technical SEO and conversion optimization, "
-                "with deep expertise in user journey mapping and behavioral psychology. "
-                "You understand how internal links can guide users toward conversions while "
-                "building topical authority. Your unique skill is balancing SEO objectives "
-                "with business outcomes, creating linking strategies that serve both search engines "
-                "and human users effectively. You specialize in French SEO methodologies "
-                "including cocon sémantique and advanced conversion funnel optimization."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[
                 self.link_analyzer.analyze_linking_opportunities,
                 self.conversion_optimizer.optimize_conversion_paths,

@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 import os
 import json
 
+from agents.shared.prompt_loader import load_prompt
 from agents.seo.tools.strategy_tools import TopicalMeshBuilder
 from agents.seo.tools.mesh_analyzer import ExistingMeshAnalyzer
 
@@ -52,30 +53,11 @@ class TopicalMeshArchitect:
     
     def _create_agent(self) -> Agent:
         """Create the Topical Mesh Architect agent."""
+        p = load_prompt("seo", "topical_mesh_architect")
         return Agent(
-            role='Topical Mesh Architect',
-            goal=(
-                'Design and analyze topical mesh structures that demonstrate '
-                'comprehensive topic authority and drive organic rankings through '
-                'strategic content clustering and internal linking.'
-            ),
-            backstory=(
-                'You are a world-class topical SEO specialist trained in the '
-                'French "Cocon Sémantique" (Semantic Cocoon) methodology pioneered '
-                'by Laurent Bourrelly. You understand that Google ranks topics, not '
-                'just keywords, and that demonstrating comprehensive topical coverage '
-                'through pillar-cluster architecture is the key to modern SEO success.\n\n'
-                'You excel at:\n'
-                '- Analyzing semantic relationships between topics\n'
-                '- Designing pillar-cluster content architectures\n'
-                '- Optimizing internal linking for PageRank flow\n'
-                '- Identifying content gaps in topical coverage\n'
-                '- Calculating topical authority scores\n'
-                '- Creating visual mesh representations\n\n'
-                'You think in terms of topic graphs, entity relationships, and '
-                'authority flow. You design content ecosystems that show Google '
-                'comprehensive expertise on a subject.'
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             verbose=True,
             allow_delegation=False,
             llm=self.llm_model  # CrewAI uses LiteLLM internally

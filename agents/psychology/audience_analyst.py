@@ -5,6 +5,7 @@ analytics data, content performance correlations, and gap analysis.
 """
 
 from crewai import Agent, Task, Crew
+from agents.shared.prompt_loader import load_prompt
 from agents.psychology.tools.persona_tools import (
     read_persona_profile,
     analyze_persona_gaps,
@@ -17,18 +18,11 @@ from agents.psychology.tools.analytics_tools import (
 
 
 def _build_agent() -> Agent:
+    p = load_prompt("psychology", "audience_analyst")
     return Agent(
-        role="Audience Analyst",
-        goal=(
-            "Refine customer personas using behavioral data, analytics, and content "
-            "performance to increase persona accuracy and confidence."
-        ),
-        backstory=(
-            "You are a customer research specialist who builds detailed audience "
-            "segment models. You combine qualitative persona definitions with "
-            "quantitative behavioral data. You identify gaps, suggest enrichments, "
-            "and update confidence scores based on evidence."
-        ),
+        role=p["role"],
+        goal=p["goal"],
+        backstory=p["backstory"],
         tools=[
             read_persona_profile,
             analyze_persona_gaps,
@@ -63,26 +57,15 @@ def run_persona_refinement(
     analytics_json = json.dumps(analytics_data or {})
     content_json = json.dumps(content_performance or [])
 
+    task_cfg = load_prompt("psychology", "audience_analyst")["tasks"]["persona_refinement"]
     refinement_task = Task(
-        description=(
-            f"Refine this customer persona using available data.\n\n"
-            f"Current persona: {persona_json}\n\n"
-            f"Analytics data: {analytics_json}\n\n"
-            f"Content performance: {content_json}\n\n"
-            f"Steps:\n"
-            f"1. Use read_persona_profile to understand current state\n"
-            f"2. Use analyze_persona_gaps to find missing data\n"
-            f"3. If analytics data is available, use merge_behavioral_data\n"
-            f"4. If content performance data is available, use correlate_content_performance\n"
-            f"5. Use update_persona_confidence to recalculate confidence\n\n"
-            f"Return a JSON object with:\n"
-            f"- suggested_updates: dict of fields to update\n"
-            f"- new_confidence: number 0-100\n"
-            f"- gaps: list of remaining gaps\n"
-            f"- insights: list of key findings"
+        description=task_cfg["description"].format(
+            persona_json=persona_json,
+            analytics_json=analytics_json,
+            content_json=content_json,
         ),
         agent=agent,
-        expected_output="JSON with suggested_updates, new_confidence, gaps, insights",
+        expected_output=task_cfg["expected_output"],
     )
 
     crew = Crew(

@@ -13,6 +13,7 @@ from crewai import Agent, Task, Crew
 from dotenv import load_dotenv
 import os
 
+from agents.shared.prompt_loader import load_prompt
 from agents.seo.tools.marketing_tools import (
     PrioritizationMatrix,
     ROIAnalyzer,
@@ -50,24 +51,11 @@ class MarketingStrategistAgent:
     
     def _create_agent(self) -> Agent:
         """Create the Marketing Strategist CrewAI agent with tools."""
+        p = load_prompt("seo", "marketing_strategist")
         return Agent(
-            role="Marketing Strategist",
-            goal=(
-                "Ensure all content decisions align with business objectives and maximize ROI. "
-                "Prioritize SEO initiatives based on business impact, not just traffic potential. "
-                "Provide strategic guidance for competitive positioning and market differentiation. "
-                "Validate that content serves marketing goals and drives business results."
-            ),
-            backstory=(
-                "You are a senior marketing strategist with 15+ years at leading B2B and B2C companies. "
-                "You've driven multi-million dollar growth through strategic content marketing at companies "
-                "like HubSpot, Salesforce, and fast-growing startups. You understand that SEO isn't just "
-                "about rankings - it's about revenue, conversions, and competitive advantage. Your superpower "
-                "is connecting SEO tactics to business outcomes. You think like a CMO and CFO simultaneously, "
-                "always asking 'what's the ROI?' and 'how does this support our growth goals?' You've seen "
-                "countless SEO strategies fail because they ignored business fundamentals, and you're here "
-                "to ensure every piece of content drives measurable business value."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[
                 self.prioritization_matrix.create_priority_matrix,
                 self.roi_analyzer.analyze_roi,

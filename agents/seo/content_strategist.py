@@ -27,6 +27,7 @@ import os
 import logging
 
 # Local imports
+from agents.shared.prompt_loader import load_prompt
 from .tools.strategy_tools import (
     OutlineGenerator,
     TopicalFlowOptimizer,
@@ -140,18 +141,11 @@ class ContentStrategistAgent:
             )
         ]
         
+        p = load_prompt("seo", "content_strategist")
         return Agent(
-            role="Content Strategist",
-            goal=(
-                "Design comprehensive content architecture with pillar pages and topic clusters. "
-                "Create detailed, SEO-optimized outlines guiding content creation. "
-                "Optimize topical flow and internal linking for maximum topical authority."
-            ),
-            backstory=(
-                "Senior content strategist with semantic SEO and information architecture expertise. "
-                "12+ years of experience designing strategies for top-tier companies. "
-                "Expert in creating content ecosystems that drive sustainable organic growth."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=tool_list,
             llm=self.llm_model,  # CrewAI uses LiteLLM internally
             verbose=verbose,

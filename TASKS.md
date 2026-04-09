@@ -14,7 +14,7 @@
 
 | Pri | Task | Status |
 |-----|------|--------|
-| -- | -- | -- |
+| P0 | P0.1 — Externalize agent prompts (role/goal/backstory/tasks) to YAML files | ✅ done |
 
 ### Audit: Code (2026-04-07)
 

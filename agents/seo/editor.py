@@ -13,6 +13,7 @@ from crewai import Agent, Task, Crew
 from dotenv import load_dotenv
 import os
 
+from agents.shared.prompt_loader import load_prompt
 from agents.seo.tools.editing_tools import (
     QualityChecker,
     ConsistencyValidator,
@@ -50,24 +51,11 @@ class EditorAgent:
     
     def _create_agent(self) -> Agent:
         """Create the Editor CrewAI agent with tools."""
+        p = load_prompt("seo", "editor")
         return Agent(
-            role="Senior Content Editor",
-            goal=(
-                "Ensure all content meets the highest quality standards before publication. "
-                "Review for grammar, clarity, consistency, and brand voice alignment. "
-                "Harmonize outputs from all previous agents into a cohesive final piece. "
-                "Format content properly and prepare all assets for deployment."
-            ),
-            backstory=(
-                "You are a senior content editor with 20+ years of experience across major publications "
-                "and digital media. You've edited thousands of articles for The New York Times, Wired, "
-                "and leading tech companies. Your eagle eye catches inconsistencies, grammatical errors, "
-                "and tone shifts that others miss. You understand both editorial excellence and SEO best "
-                "practices - you know that great content must be both perfectly written and strategically "
-                "optimized. You're the final gatekeeper, ensuring every piece that ships is publication-ready "
-                "and represents the brand at its best. Your edits are surgical - you improve content without "
-                "losing the writer's voice or the strategic intent."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[
                 self.quality_checker.check_quality,
                 self.consistency_validator.validate_consistency,

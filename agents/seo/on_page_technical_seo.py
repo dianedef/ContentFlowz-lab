@@ -15,6 +15,7 @@ from crewai import Agent, Task, Crew
 from dotenv import load_dotenv
 import os
 
+from agents.shared.prompt_loader import load_prompt
 from agents.seo.tools.technical_tools import (
     SchemaGenerator,
     MetadataValidator,
@@ -52,23 +53,11 @@ class OnPageTechnicalSEOAgent:
     
     def _create_agent(self) -> Agent:
         """Create the Technical SEO Specialist CrewAI agent with tools."""
+        p = load_prompt("seo", "technical_seo")
         return Agent(
-            role="Technical SEO Specialist",
-            goal=(
-                "Implement technical SEO best practices and structured data markup. "
-                "Validate metadata compliance and optimize on-page elements. "
-                "Analyze internal linking architecture for maximum SEO value. "
-                "Ensure all technical factors are optimized for search engine crawling and indexing."
-            ),
-            backstory=(
-                "You are a technical SEO expert with deep knowledge of search engine algorithms, "
-                "structured data standards, and web technologies. With 12+ years of experience, "
-                "you've optimized thousands of pages for Fortune 500 companies and high-traffic sites. "
-                "You stay current with Google's algorithm updates and schema.org specifications. "
-                "Your expertise spans HTML semantics, JavaScript SEO, Core Web Vitals, and structured data. "
-                "You understand how search engines crawl, render, and index content. Your technical "
-                "optimizations consistently improve rankings and click-through rates from search results."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[
                 self.schema_generator.generate_schema,
                 self.metadata_validator.validate_metadata,

@@ -8,25 +8,15 @@ This agent uses no tools — it reasons purely over the provided context.
 """
 
 from crewai import Agent, Task, Crew
+from agents.shared.prompt_loader import load_prompt
 
 
 def _build_agent() -> Agent:
+    p = load_prompt("psychology", "angle_strategist")
     return Agent(
-        role="Content Angle Strategist",
-        goal=(
-            "Generate compelling content angles that authentically connect the "
-            "creator's narrative with the customer's pain points. Each angle "
-            "should feel personal, strategic, and impossible to replicate."
-        ),
-        backstory=(
-            "You are a content strategist who specializes in personal brand "
-            "content. Your superpower is finding the intersection between what "
-            "a creator has lived and what their audience needs to hear. You "
-            "generate angles that are both authentic (grounded in real creator "
-            "experience) and strategic (addressing specific customer pain). "
-            "You never suggest generic topics — every angle has a unique spin "
-            "that only THIS creator could write."
-        ),
+        role=p["role"],
+        goal=p["goal"],
+        backstory=p["backstory"],
         tools=[],
         verbose=False,
     )
@@ -92,38 +82,25 @@ def run_angle_generation(
             "9. seo_keyword: the primary SEO keyword this angle targets (if applicable, null otherwise)\n"
         )
 
+    task_cfg = load_prompt("psychology", "angle_strategist")["tasks"]["angle_generation"]
     generation_task = Task(
-        description=(
-            f"Generate {count} content angles by crossing creator identity with customer persona.\n\n"
-            f"## Creator Identity\n"
-            f"**Voice**: {json.dumps(creator_voice)}\n"
-            f"**Positioning**: {json.dumps(creator_positioning)}\n"
-            f"**Current narrative**: {narrative_summary or 'Not available'}\n\n"
-            f"## Target Persona\n"
-            f"**Name**: {persona_data.get('name', 'Unknown')}\n"
-            f"**Pain points**: {json.dumps(persona_data.get('painPoints', []))}\n"
-            f"**Goals**: {json.dumps(persona_data.get('goals', []))}\n"
-            f"**Language triggers**: {json.dumps(persona_data.get('language', {}).get('triggers', []))}\n"
-            f"**Content preferences**: {json.dumps(persona_data.get('contentPreferences', {}))}\n"
-            f"{seo_section}"
-            f"{trending_section}"
-            f"\n## Instructions\n"
-            f"{content_type_instruction}\n\n"
-            f"For each angle, provide:\n"
-            f"1. title: Working title\n"
-            f"2. hook: Opening hook/headline\n"
-            f"3. angle: The strategic angle (how creator narrative meets customer pain)\n"
-            f"4. content_type: article, newsletter, short, or social_post\n"
-            f"5. narrative_thread: Which creator story this draws from\n"
-            f"6. pain_point_addressed: Which customer pain this solves\n"
-            f"7. confidence: 0-100 confidence score\n"
-            f"{scoring_instruction}\n"
-            f"Return a JSON object with:\n"
-            f"- angles: array of angle objects\n"
-            f"- strategy_note: high-level rationale for the set of angles"
+        description=task_cfg["description"].format(
+            count=count,
+            creator_voice=json.dumps(creator_voice),
+            creator_positioning=json.dumps(creator_positioning),
+            narrative_summary=narrative_summary or "Not available",
+            persona_name=persona_data.get("name", "Unknown"),
+            pain_points=json.dumps(persona_data.get("painPoints", [])),
+            goals=json.dumps(persona_data.get("goals", [])),
+            language_triggers=json.dumps(persona_data.get("language", {}).get("triggers", [])),
+            content_preferences=json.dumps(persona_data.get("contentPreferences", {})),
+            seo_section=seo_section,
+            trending_section=trending_section,
+            content_type_instruction=content_type_instruction,
+            scoring_instruction=scoring_instruction,
         ),
         agent=agent,
-        expected_output="JSON with angles array and strategy_note",
+        expected_output=task_cfg["expected_output"],
     )
 
     crew = Crew(

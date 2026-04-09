@@ -7,6 +7,7 @@ including hook, timed script, hashtags, and visual notes.
 import json
 from typing import Optional
 from crewai import Agent, Task, Crew
+from agents.shared.prompt_loader import load_prompt
 
 # Conditional status tracking (graceful degradation)
 try:
@@ -30,22 +31,11 @@ class ShortContentCrew:
         self.llm_model = llm_model
 
     def _build_agent(self) -> Agent:
+        p = load_prompt("short", "short_form_writer")
         return Agent(
-            role="Short-Form Content Writer",
-            goal=(
-                "Create viral short-form video scripts that capture attention in "
-                "the first 2 seconds and deliver value in under 60 seconds. "
-                "Scripts must be authentic to the creator's voice and address "
-                "a specific audience pain point."
-            ),
-            backstory=(
-                "You are a short-form content specialist who has studied what "
-                "makes TikToks, Reels, and YouTube Shorts go viral. You know "
-                "that the hook is everything — if you lose them in 2 seconds, "
-                "it's over. You write punchy, conversational scripts with clear "
-                "visual cues and strong CTAs. You adapt tone and format to each "
-                "platform while keeping the creator's authentic voice."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[],
             verbose=False,
         )

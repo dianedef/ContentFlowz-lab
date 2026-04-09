@@ -5,6 +5,7 @@ and produces narrative updates that the creator reviews before merging.
 """
 
 from crewai import Agent, Task, Crew
+from agents.shared.prompt_loader import load_prompt
 from agents.psychology.tools.narrative_tools import (
     read_narrative_context,
     analyze_entry_patterns,
@@ -14,18 +15,11 @@ from agents.psychology.tools.narrative_tools import (
 
 
 def _build_agent() -> Agent:
+    p = load_prompt("psychology", "creator_psychologist")
     return Agent(
-        role="Creator Psychologist",
-        goal=(
-            "Synthesize the creator's raw entries into a coherent narrative update "
-            "that captures voice evolution, positioning shifts, and chapter transitions."
-        ),
-        backstory=(
-            "You are a brand psychologist who specializes in personal branding and "
-            "creator identity. You read between the lines of a creator's reflections "
-            "to detect shifts in voice, positioning, and narrative arc. You never "
-            "fabricate — you surface what's already there."
-        ),
+        role=p["role"],
+        goal=p["goal"],
+        backstory=p["backstory"],
         tools=[
             read_narrative_context,
             analyze_entry_patterns,
@@ -63,22 +57,16 @@ def run_narrative_synthesis(
     voice_json = json.dumps(current_voice or {})
     positioning_json = json.dumps(current_positioning or {})
 
+    task_cfg = load_prompt("psychology", "creator_psychologist")["tasks"]["narrative_synthesis"]
     synthesis_task = Task(
-        description=(
-            f"Analyze these creator entries and synthesize a narrative update.\n\n"
-            f"Current voice profile: {voice_json}\n"
-            f"Current positioning: {positioning_json}\n"
-            f"Current chapter: {chapter_title or 'None'}\n\n"
-            f"Entries to analyze:\n{entries_json}\n\n"
-            f"Steps:\n"
-            f"1. Use read_narrative_context to understand current state\n"
-            f"2. Use analyze_entry_patterns to find themes and evolution\n"
-            f"3. Use detect_chapter_transition to check for narrative shifts\n"
-            f"4. Use generate_narrative_update to format the result\n\n"
-            f"Return the final JSON from generate_narrative_update."
+        description=task_cfg["description"].format(
+            voice_json=voice_json,
+            positioning_json=positioning_json,
+            chapter_title=chapter_title or "None",
+            entries_json=entries_json,
         ),
         agent=agent,
-        expected_output="JSON object with voice_delta, positioning_delta, narrative_summary",
+        expected_output=task_cfg["expected_output"],
     )
 
     crew = Crew(

@@ -15,6 +15,7 @@ import os
 
 from agents.seo.tools.writing_tools import KeywordIntegrator
 from agents.shared.tools.firecrawl_tools import scrape_url
+from agents.shared.prompt_loader import load_prompt
 
 load_dotenv()
 
@@ -43,24 +44,11 @@ class CopywriterAgent:
     
     def _create_agent(self) -> Agent:
         """Create the Copywriter CrewAI agent with tools."""
+        p = load_prompt("seo", "copywriter")
         return Agent(
-            role="SEO Copywriter",
-            goal=(
-                "Write compelling, SEO-optimized content that ranks well and engages readers. "
-                "Create natural-sounding copy with strategic keyword integration. "
-                "Generate click-worthy metadata that improves CTR. "
-                "Adapt tone and style to match brand voice and audience expectations."
-            ),
-            backstory=(
-                "You are an elite SEO copywriter with 15+ years of experience crafting content "
-                "that both ranks on page one and converts readers. You've written for Fortune 500 "
-                "brands, SaaS startups, and everything in between. Your superpower is making "
-                "SEO-optimized content feel natural and engaging - never keyword-stuffed or robotic. "
-                "You understand search intent deeply and know how to satisfy both users and search engines. "
-                "Your articles consistently achieve top rankings while maintaining high engagement metrics "
-                "like low bounce rates and long dwell times. You're a master of persuasive writing, "
-                "storytelling, and making complex topics accessible."
-            ),
+            role=p["role"],
+            goal=p["goal"],
+            backstory=p["backstory"],
             tools=[
                 self.keyword_integrator.integrate_keywords,
                 scrape_url,
