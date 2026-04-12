@@ -25,7 +25,7 @@ from agents.scheduler.schemas.publishing_schemas import (
 class CalendarAnalyzer:
     """Analyzes publishing history and patterns"""
 
-    def __init__(self, data_dir: str = "/root/contentflowz-lab/data/scheduler"):
+    def __init__(self, data_dir: str = "/root/contentflow_lab/data/scheduler"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.history_file = self.data_dir / "publishing_history.json"
@@ -233,7 +233,7 @@ class CalendarAnalyzer:
 class QueueManager:
     """Manages content publishing queue"""
 
-    def __init__(self, data_dir: str = "/root/contentflowz-lab/data/scheduler"):
+    def __init__(self, data_dir: str = "/root/contentflow_lab/data/scheduler"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.queue_file = self.data_dir / "content_queue.json"
@@ -416,7 +416,7 @@ class TimeOptimizer:
     """Optimizes publishing times based on historical data and rules"""
 
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or "/root/contentflowz-lab/agents/scheduler/config/calendar_rules.yaml"
+        self.config_path = config_path or "/root/contentflow_lab/agents/scheduler/config/calendar_rules.yaml"
         self.rules = self._load_rules()
 
     def _load_rules(self) -> Dict[str, Any]:
@@ -529,7 +529,7 @@ class TimeOptimizer:
             end = start + timedelta(days=days)
 
             # Load queue
-            queue_file = Path("/root/contentflowz-lab/data/scheduler/content_queue.json")
+            queue_file = Path("/root/contentflow_lab/data/scheduler/content_queue.json")
             if queue_file.exists():
                 with open(queue_file, 'r') as f:
                     queue = json.load(f)

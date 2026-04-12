@@ -23,7 +23,7 @@ from agents.scheduler.schemas.analysis_schemas import (
 class DependencyAnalyzer:
     """Analyzes project dependencies"""
 
-    def __init__(self, project_path: str = "/root/contentflowz-lab"):
+    def __init__(self, project_path: str = "/root/contentflow_lab"):
         self.project_path = Path(project_path)
 
     @tool("Analyze Dependencies")
@@ -286,7 +286,7 @@ class DependencyAnalyzer:
 class VulnerabilityScanner:
     """Scans for security vulnerabilities"""
 
-    def __init__(self, project_path: str = "/root/contentflowz-lab"):
+    def __init__(self, project_path: str = "/root/contentflow_lab"):
         self.project_path = Path(project_path)
 
     @tool("Scan for Vulnerabilities")
@@ -423,7 +423,7 @@ class VulnerabilityScanner:
 class BuildAnalyzer:
     """Analyzes build performance"""
 
-    def __init__(self, project_path: str = "/root/contentflowz-lab"):
+    def __init__(self, project_path: str = "/root/contentflow_lab"):
         self.project_path = Path(project_path)
 
     @tool("Analyze Build Performance")
@@ -557,7 +557,7 @@ class BuildAnalyzer:
 class CostTracker:
     """Tracks API costs and usage"""
 
-    def __init__(self, data_dir: str = "/root/contentflowz-lab/data/scheduler"):
+    def __init__(self, data_dir: str = "/root/contentflow_lab/data/scheduler"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.costs_file = self.data_dir / "api_costs.json"

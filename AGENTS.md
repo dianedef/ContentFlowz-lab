@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance for AI agents working in the contentflowz codebase. It documents commands, patterns, conventions, and gotchas specific to this multi-component automation system.
+This file provides guidance for AI agents working in the contentflow codebase. It documents commands, patterns, conventions, and gotchas specific to this multi-component automation system.
 
 ---
 
@@ -120,8 +120,8 @@ pnpm preview              # Preview production build
 # PM2 (manual server management)
 pm2 start ecosystem.config.cjs
 pm2 status
-pm2 logs contentflowz
-pm2 restart contentflowz
+pm2 logs contentflow
+pm2 restart contentflow
 ```
 
 ### Secrets Management (Doppler)
@@ -129,7 +129,7 @@ pm2 restart contentflowz
 ```bash
 # Initial setup
 doppler login
-doppler setup              # Select project: contentflowz, config: dev
+doppler setup              # Select project: contentflow, config: dev
 
 # View secrets
 doppler secrets
@@ -177,7 +177,7 @@ git pull origin main
 ### Root Structure
 
 ```
-/root/contentflowz-lab/
+/root/contentflow_lab/
 ├── agents/                    # CrewAI SEO agents (active implementation)
 │   ├── seo/
 │   │   ├── research_analyst.py
@@ -488,7 +488,7 @@ pip install -r requirements.txt
 ```bash
 # Setup (one-time)
 doppler login
-doppler setup  # Select: contentflowz / dev
+doppler setup  # Select: contentflow / dev
 
 # Use in development
 doppler run -- python main.py
@@ -941,7 +941,7 @@ YDC_API_KEY=...                     # You.com for STORM
 SENDGRID_API_KEY=...                # Email delivery
 
 # Optional
-APP_URL=https://contentflowz.com        # For OpenRouter headers
+APP_URL=https://contentflow.com        # For OpenRouter headers
 ```
 
 ### Next.js (chatbot/.env.local)
@@ -1004,7 +1004,7 @@ Returns: `{ success, source, files_analyzed, broken_links[], broken_links_count,
 
 **Quick test:**
 ```bash
-cd /home/claude/ContentFlowz_lab
+cd /home/claude/contentflow_lab
 python -c "
 from agents.seo.tools.local_link_checker import LocalLinkChecker
 checker = LocalLinkChecker()

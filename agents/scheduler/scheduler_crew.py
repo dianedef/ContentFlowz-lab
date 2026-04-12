@@ -42,7 +42,7 @@ class SchedulerPipeline:
         self,
         llm_model: str = "mixtral-8x7b-32768",
         base_url: str = "http://localhost:3000",
-        project_path: str = "/root/contentflowz-lab"
+        project_path: str = "/root/contentflow_lab"
     ):
         """
         Initialize Scheduler Crew with all agents.
@@ -417,7 +417,7 @@ class SchedulerPipeline:
 def create_scheduler_pipeline(
     llm_model: str = "mixtral-8x7b-32768",
     base_url: str = "http://localhost:3000",
-    project_path: str = "/root/contentflowz-lab"
+    project_path: str = "/root/contentflow_lab"
 ) -> SchedulerPipeline:
     """
     Factory function to create the Scheduler Pipeline.

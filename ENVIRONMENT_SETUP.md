@@ -10,7 +10,7 @@ curl -Ls https://cli.doppler.com/install.sh | sh
 
 # 2. Login and setup
 doppler login
-doppler setup  # Select: contentflowz / dev
+doppler setup  # Select: contentflow / dev
 
 # 3. Run with secrets injected
 doppler run -- python main.py
@@ -90,7 +90,7 @@ doppler run -- uvicorn api.main:app --host 0.0.0.0 --port 8000
 | `NEWSLETTER_IMAP_PASSWORD` | Gmail App Password | Gmail Security settings |
 | `NEWSLETTER_IMAP_HOST` | IMAP server (default: imap.gmail.com) | Optional |
 | `NEWSLETTER_IMAP_FOLDER` | Folder to read (default: Newsletters) | Optional |
-| `NEWSLETTER_IMAP_ARCHIVE` | Archive folder (default: CONTENTFLOWZ_DONE) | Optional |
+| `NEWSLETTER_IMAP_ARCHIVE` | Archive folder (default: CONTENTFLOW_DONE) | Optional |
 | `COMPOSIO_API_KEY` | Composio API (if using composio backend) | https://composio.dev |
 
 ### Optional Keys
@@ -157,21 +157,21 @@ If you get numpy/pandas library errors:
 
 ### Development
 ```bash
-doppler setup --project contentflowz --config dev
+doppler setup --project contentflow --config dev
 # Use FREE APIs (Groq, You.com free tier)
 # Lower rate limits acceptable
 ```
 
 ### Staging
 ```bash
-doppler setup --project contentflowz --config staging
+doppler setup --project contentflow --config staging
 # Paid APIs with higher limits
 # Test production volume
 ```
 
 ### Production
 ```bash
-doppler setup --project contentflowz --config prod
+doppler setup --project contentflow --config prod
 # Premium APIs (OpenAI, paid You.com)
 # Maximum rate limits
 # Monitoring enabled
@@ -216,9 +216,9 @@ doppler setup --config staging
 doppler configs tokens create pm2-token --config dev
 
 # Use in PM2
-pm2 start --name "contentflowz" \
+pm2 start --name "contentflow" \
   --interpreter bash -- -c \
-  "export DOPPLER_TOKEN='dp.st.xxx' && cd /root/contentflowz && doppler run -- python main.py"
+  "export DOPPLER_TOKEN='dp.st.xxx' && cd /root/contentflow && doppler run -- python main.py"
 ```
 
 ---
@@ -255,11 +255,11 @@ doppler secrets get KEY_NAME
 ### "Wrong project/config"
 ```bash
 # Verify configuration
-doppler configure get project.name  # Should be: contentflowz
+doppler configure get project.name  # Should be: contentflow
 doppler configure get config.name   # Should be: dev
 
 # Reconfigure if wrong
-doppler setup --project contentflowz --config dev
+doppler setup --project contentflow --config dev
 ```
 
 ### Doppler not installed

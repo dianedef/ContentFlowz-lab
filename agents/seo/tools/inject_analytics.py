@@ -1,4 +1,4 @@
-"""Inject or remove the ContentFlowz tracking script in a project's site layout.
+"""Inject or remove the ContentFlow tracking script in a project's site layout.
 
 Used by the deployment agent based on the project's analytics_enabled setting.
 Both operations are idempotent — safe to call multiple times.
@@ -6,7 +6,7 @@ Both operations are idempotent — safe to call multiple times.
 Usage:
     from agents.seo.tools.inject_analytics import inject_tracking_script, remove_tracking_script
 
-    inject_tracking_script("/path/to/repo", "https://api.contentflowz.com")
+    inject_tracking_script("/path/to/repo", "https://api.contentflow.com")
     remove_tracking_script("/path/to/repo")
 """
 
@@ -83,8 +83,8 @@ def inject_tracking_script(repo_path: str, api_base_url: str) -> bool:
 
     Args:
         repo_path: Absolute path to the project's git repo.
-        api_base_url: Base URL of the ContentFlowz API
-                      (e.g. "https://api.contentflowz.com").
+        api_base_url: Base URL of the ContentFlow API
+                      (e.g. "https://api.contentflow.com").
 
     Returns:
         True if the script was injected or already present.
@@ -117,7 +117,7 @@ def inject_tracking_script(repo_path: str, api_base_url: str) -> bool:
         content = content.replace("</Head>", f"  {script_tag}\n</Head>")
     else:
         # Fallback: append to end of file with a comment
-        content += f"\n<!-- ContentFlowz Analytics -->\n{script_tag}\n"
+        content += f"\n<!-- ContentFlow Analytics -->\n{script_tag}\n"
 
     layout.write_text(content)
     return True
@@ -152,7 +152,7 @@ def remove_tracking_script(repo_path: str) -> bool:
     lines = content.splitlines(keepends=True)
     cleaned = [line for line in lines if _SCRIPT_MARKER not in line]
     # Also remove standalone comment line if left behind
-    cleaned = [line for line in cleaned if line.strip() != "<!-- ContentFlowz Analytics -->"]
+    cleaned = [line for line in cleaned if line.strip() != "<!-- ContentFlow Analytics -->"]
 
     layout.write_text("".join(cleaned))
     return True

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up contentflowz with Flox + Doppler..."
+echo "🚀 Setting up contentflow with Flox + Doppler..."
 echo ""
 
 # Check if Flox is installed
@@ -89,12 +89,12 @@ if doppler configure get project.name >/dev/null 2>&1; then
 fi
 
 echo ""
-echo "Configuration de Doppler pour contentflowz..."
+echo "Configuration de Doppler pour contentflow..."
 echo ""
 
 # Ask for project setup method
 echo "Choisissez une option:"
-echo "  1) Créer un nouveau projet Doppler 'contentflowz'"
+echo "  1) Créer un nouveau projet Doppler 'contentflow'"
 echo "  2) Utiliser un projet Doppler existant"
 echo "  3) Utiliser .env local (sans Doppler)"
 echo ""
@@ -105,15 +105,15 @@ echo ""
 case $choice in
     1)
         # Create new Doppler project
-        echo "📦 Création du projet Doppler 'contentflowz'..."
-        if doppler projects create contentflowz --description "AI Robots automation system" 2>/dev/null; then
+        echo "📦 Création du projet Doppler 'contentflow'..."
+        if doppler projects create contentflow --description "AI Robots automation system" 2>/dev/null; then
             echo "✅ Projet créé"
         else
-            echo "ℹ️  Projet 'contentflowz' existe déjà ou erreur"
+            echo "ℹ️  Projet 'contentflow' existe déjà ou erreur"
         fi
         
         # Configure project
-        doppler setup --project contentflowz --config dev --no-interactive
+        doppler setup --project contentflow --config dev --no-interactive
         
         echo ""
         echo "📝 Ajout des secrets au projet Doppler..."

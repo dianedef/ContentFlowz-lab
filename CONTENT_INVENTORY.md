@@ -327,7 +327,7 @@ const { frontmatter } = Astro.props
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://contentflowz.com/blog/storm-wikipedia-quality-articles</loc>
+    <loc>https://contentflow.com/blog/storm-wikipedia-quality-articles</loc>
     <lastmod>2026-01-15</lastmod>
     <priority>0.8</priority>
   </url>
@@ -339,7 +339,7 @@ const { frontmatter } = Astro.props
 # public/robots.txt
 User-agent: *
 Allow: /
-Sitemap: https://contentflowz.com/sitemap.xml
+Sitemap: https://contentflow.com/sitemap.xml
 ```
 
 ---

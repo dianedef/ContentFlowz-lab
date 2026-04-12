@@ -48,12 +48,12 @@ memory = Memory()
 # Search for relevant memories
 relevant_memories = memory.search(
     query="brand voice and content strategy",
-    user_id="contentflowz-project",
+    user_id="contentflow-project",
     limit=3
 )
 
 # Add new memories from interactions
-memory.add(messages, user_id="contentflowz-project")
+memory.add(messages, user_id="contentflow-project")
 ```
 
 **Memory Types**:
@@ -264,14 +264,14 @@ project_knowledge = [
     {
         "role": "system",
         "content": """
-        Project: contentflowz
+        Project: contentflow
         Brand Voice: Technical but accessible, informal French (tutoiement)
         Main Topics: AI agents, automation, SEO, newsletters
         Target Audience: French-speaking developers and marketers
         """
     }
 ]
-memory.add(project_knowledge, user_id="contentflowz-project")
+memory.add(project_knowledge, user_id="contentflow-project")
 ```
 
 #### Step 2: Add Context Loader to Each Agent
@@ -281,7 +281,7 @@ def load_project_context(topic: str) -> str:
     """Load relevant context before any content generation."""
     relevant = memory.search(
         query=f"brand voice, existing content, and strategy for {topic}",
-        user_id="contentflowz-project",
+        user_id="contentflow-project",
         limit=5
     )
     return "\n".join(f"- {entry['memory']}" for entry in relevant["results"])
@@ -302,7 +302,7 @@ def save_to_memory(content_type: str, title: str, topics: list, summary: str):
             Date: {datetime.now().isoformat()}
             """
         }
-    ], user_id="contentflowz-project")
+    ], user_id="contentflow-project")
 ```
 
 #### Step 4: CrewAI + Mem0 Integration
@@ -315,7 +315,7 @@ external_memory = ExternalMemory(
     embedder_config={
         "provider": "mem0",
         "config": {
-            "user_id": "contentflowz-project",
+            "user_id": "contentflow-project",
         }
     }
 )

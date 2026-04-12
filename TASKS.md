@@ -1,4 +1,4 @@
-# ContentFlowz Lab — Tasks
+# ContentFlow Lab — Tasks
 
 ## Completed
 
@@ -8,7 +8,8 @@
 | Content Quality Scoring — textstat integration + fix broken Flesch | Done |
 | OG Preview service — OpenGraph extraction for link previews | Done |
 | Social Listener spec — `specs/social-listener.md` | Done |
-| Feature documentation on ContentFlowz site (3 pages + index update) | Done |
+| Branding alignment — rename ContentFlowz defaults, paths, domains, and archive labels to ContentFlow | Done |
+| Feature documentation on ContentFlow site (3 pages + index update) | Done |
 | P0.2 — Rename fake agents to pipelines (SchedulerPipeline, ImagePipeline) | Done |
 | P0.3 — Remove hollow SEO tools, wire KeywordIntegrator to DataForSEO | Done |
 | P0.4 — Wire Firecrawl + Exa as shared CrewAI tools | Done |
@@ -401,7 +402,7 @@ Garder `allow_delegation=False` sur les agents terminaux (ceux qui produisent l'
 ### OpenAI Skills in API — Compatibilité multi-LLM
 
 **Lien :** https://developers.openai.com/cookbook/examples/skills_in_api
-**Pertinence :** ContentFlowz ne doit pas être verrouillé sur un seul LLM. Le pattern "skills" d'OpenAI montre comment encapsuler des agents comme des bundles réutilisables avec un manifeste. Ce pattern est LLM-agnostique dans son concept : un skill = instructions + fichiers + outils, monté sur n'importe quel runtime.
+**Pertinence :** ContentFlow ne doit pas être verrouillé sur un seul LLM. Le pattern "skills" d'OpenAI montre comment encapsuler des agents comme des bundles réutilisables avec un manifeste. Ce pattern est LLM-agnostique dans son concept : un skill = instructions + fichiers + outils, monté sur n'importe quel runtime.
 
 **Actions à explorer :**
 - [ ] Étudier comment rendre les agents CrewAI compatibles avec plusieurs LLMs (Claude, GPT, Codex, Gemini)

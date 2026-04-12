@@ -17,7 +17,7 @@ IMAP_DEFAULTS: Dict[str, Any] = {
     "email": os.getenv("NEWSLETTER_IMAP_EMAIL"),
     "app_password": os.getenv("NEWSLETTER_IMAP_PASSWORD"),
     "newsletter_folder": os.getenv("NEWSLETTER_IMAP_FOLDER", "Newsletters"),
-    "archive_folder": os.getenv("NEWSLETTER_IMAP_ARCHIVE", "CONTENTFLOWZ_DONE"),
+    "archive_folder": os.getenv("NEWSLETTER_IMAP_ARCHIVE", "CONTENTFLOW_DONE"),
     "days_to_scan": int(os.getenv("NEWSLETTER_IMAP_DAYS", "7")),
     "max_emails": int(os.getenv("NEWSLETTER_IMAP_MAX_EMAILS", "20")),
 }

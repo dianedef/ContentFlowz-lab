@@ -107,7 +107,7 @@ def ingest_newsletter_inbox(
     max_results: int = 20,
     project_id: Optional[str] = None,
     persona_context: Optional[str] = None,
-    archive_folder: str = "CONTENTFLOWZ_DONE",
+    archive_folder: str = "CONTENTFLOW_DONE",
 ) -> int:
     """Read newsletters via IMAP, extract ideas with LLM, and archive.
 

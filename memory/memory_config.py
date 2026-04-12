@@ -47,7 +47,7 @@ def _get_local_config() -> dict:
         "vector_store": {
             "provider": "chroma",
             "config": {
-                "collection_name": "contentflowz_brain",
+                "collection_name": "contentflow_brain",
                 "path": str(DATA_DIR),
             },
         },

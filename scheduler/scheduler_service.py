@@ -489,7 +489,7 @@ class SchedulerService:
                 max_results=config.get("max_results", 20),
                 project_id=project_id,
                 persona_context=persona_context,
-                archive_folder=config.get("archive_folder", "CONTENTFLOWZ_DONE"),
+                archive_folder=config.get("archive_folder", "CONTENTFLOW_DONE"),
             )
             print(f"✅ Newsletter ingestion: {count} ideas")
 

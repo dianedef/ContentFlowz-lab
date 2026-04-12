@@ -1,10 +1,10 @@
-# TOOLS.md - Analyse des outils potentiels pour contentflowz-lab
+# TOOLS.md - Analyse des outils potentiels pour contentflow_lab
 
 ## Top 5 Prioritaires
 
 | Priorité | Outil              | Raison                                                    |
 | -------- | ------------------ | --------------------------------------------------------- |
-| 1        | **MCP Python SDK** | Exposer contentflowz-lab comme serveur MCP standardisé           |
+| 1        | **MCP Python SDK** | Exposer contentflow_lab comme serveur MCP standardisé           |
 | 2        | **GPT Researcher** | Améliorer le Research Analyst avec recherche multi-source |
 | 3        | **Jina AI**        | Reader API + embeddings pour content analysis             |
 | 4        | **Vestige**        | Mémoire cognitive MCP pour Claude (alternative Letta)     |

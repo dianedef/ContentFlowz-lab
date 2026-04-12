@@ -21,7 +21,7 @@ from agents.scheduler.schemas.publishing_schemas import (
 class GitDeployer:
     """Handles Git operations and deployment"""
 
-    def __init__(self, repo_path: str = "/root/contentflowz-lab", project_id: Optional[str] = None):
+    def __init__(self, repo_path: str = "/root/contentflow_lab", project_id: Optional[str] = None):
         self._project_id = project_id
         self._repo_path_override = repo_path
         self.github_token = os.getenv("GITHUB_TOKEN")
@@ -477,7 +477,7 @@ class GoogleIntegration:
 class DeploymentMonitor:
     """Monitors deployment health and status"""
 
-    def __init__(self, data_dir: str = "/root/contentflowz-lab/data/scheduler"):
+    def __init__(self, data_dir: str = "/root/contentflow_lab/data/scheduler"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.deployments_file = self.data_dir / "deployments.json"

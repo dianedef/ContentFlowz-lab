@@ -100,7 +100,7 @@ ROBOLLY_CONFIG = {
 BUNNY_CONFIG = {
     "storage": {
         "api_key": os.getenv("BUNNY_STORAGE_API_KEY"),
-        "storage_zone": os.getenv("BUNNY_STORAGE_ZONE", "contentflowz-images"),
+        "storage_zone": os.getenv("BUNNY_STORAGE_ZONE", "contentflow-images"),
         "base_url": "https://storage.bunnycdn.com",
         "region": os.getenv("BUNNY_STORAGE_REGION", "de"),  # de, ny, la, sg, syd
         "hostname": os.getenv("BUNNY_CDN_HOSTNAME", ""),
@@ -224,8 +224,8 @@ class ImageConfig:
     llm_temperature: float = float(os.getenv("IMAGE_ROBOT_LLM_TEMPERATURE", "0.3"))
 
     # Project Paths
-    project_path: str = os.getenv("PROJECT_PATH", "/root/contentflowz-lab")
-    data_dir: str = os.getenv("IMAGE_ROBOT_DATA_DIR", "/root/contentflowz-lab/data/images")
+    project_path: str = os.getenv("PROJECT_PATH", "/root/contentflow_lab")
+    data_dir: str = os.getenv("IMAGE_ROBOT_DATA_DIR", "/root/contentflow_lab/data/images")
     temp_dir: str = os.getenv("IMAGE_ROBOT_TEMP_DIR", "/tmp/image-robot")
 
     # Feature Flags

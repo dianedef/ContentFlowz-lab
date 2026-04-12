@@ -1,6 +1,6 @@
 # Cost Model — DataForSEO API
 
-Reference document for pricing ContentFlowz. Last updated: 2026-03-29.
+Reference document for pricing ContentFlow. Last updated: 2026-03-29.
 
 ## How DataForSEO bills
 
@@ -11,7 +11,7 @@ Reference document for pricing ContentFlowz. Last updated: 2026-03-29.
 | Standard | $0.05 | 5-30s (async) | Scheduled pipelines, batch jobs |
 | Live | $0.075 | 1-3s (sync) | Interactive, real-time needs |
 
-All ContentFlowz scheduled jobs use **Standard queue** by default.
+All ContentFlow scheduled jobs use **Standard queue** by default.
 
 ## Cost per pipeline
 

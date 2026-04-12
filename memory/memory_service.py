@@ -23,7 +23,7 @@ except ImportError:
     MEM0_AVAILABLE = False
 
 # Default user/agent ID for scoping memories
-DEFAULT_USER_ID = "contentflowz"
+DEFAULT_USER_ID = "contentflow"
 
 
 def _scope_user_id(user_id: Optional[str] = None, project_id: Optional[str] = None) -> str:

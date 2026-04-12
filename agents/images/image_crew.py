@@ -60,7 +60,7 @@ class ImagePipeline:
     def __init__(
         self,
         llm_model: str = "gpt-4o-mini",
-        project_path: str = "/root/contentflowz-lab"
+        project_path: str = "/root/contentflow_lab"
     ):
         """
         Initialize Image Robot Crew with all agents.
@@ -483,7 +483,7 @@ class ImagePipeline:
 
 def create_image_pipeline(
     llm_model: str = "gpt-4o-mini",
-    project_path: str = "/root/contentflowz-lab"
+    project_path: str = "/root/contentflow_lab"
 ) -> ImagePipeline:
     """
     Factory function to create the Image Pipeline.

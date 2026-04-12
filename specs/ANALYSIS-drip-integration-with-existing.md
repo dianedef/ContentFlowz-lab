@@ -1,4 +1,4 @@
-# Analyse d'integration : Content Drip × Existant ContentFlowz Lab
+# Analyse d'integration : Content Drip × Existant ContentFlow Lab
 
 Date: 2026-04-06
 Companion de: `SPEC-progressive-content-release.md`
