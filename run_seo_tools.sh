@@ -25,6 +25,13 @@ fi
 # Set library path to include flox-provided system libraries
 export LD_LIBRARY_PATH="$GCC_LIB_PATH:$ZLIB_LIB_PATH:$LD_LIBRARY_PATH"
 
-# Activate venv and run the command
-source venv/bin/activate
+# Activate whichever virtualenv exists, then run the command.
+if [ -f ".venv/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+elif [ -f "venv/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source venv/bin/activate
+fi
+
 exec "$@"

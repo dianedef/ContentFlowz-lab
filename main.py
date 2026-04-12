@@ -18,6 +18,7 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(os.environ.get("PORT", 8000))
+    reload_enabled = os.environ.get("UVICORN_RELOAD", "").lower() in {"1", "true", "yes"}
 
     print("\n" + "=" * 60)
     print("🚀 SEO ROBOTS API SERVER")
@@ -34,6 +35,6 @@ if __name__ == "__main__":
         "api.main:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
+        reload=reload_enabled,
         log_level="info",
     )

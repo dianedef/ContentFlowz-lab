@@ -275,10 +275,18 @@ app.add_middleware(
         "http://localhost:3000",      # Next.js dev
         "http://localhost:3001",      # Alternative port
         "http://127.0.0.1:3000",      # Alternative localhost
-        "https://contentflow.com",       # Production domain
-        "https://www.contentflow.com",   # Production domain
+        "https://contentflow.com",    # Legacy production domain
+        "https://www.contentflow.com",
+        "https://winflowz.com",       # Current production domain
+        "https://www.winflowz.com",
+        "https://app.winflowz.com",
     ],
-    allow_origin_regex=r"https://contentflow[a-z0-9-]*\.(vercel\.app|railway\.app|render\.com)$",
+    allow_origin_regex=(
+        r"https://("
+        r"contentflow[a-z0-9-]*\.(vercel\.app|railway\.app|render\.com)"
+        r"|[a-z0-9-]+\.winflowz\.com"
+        r")$"
+    ),
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
