@@ -19,6 +19,7 @@
 | P1.1 — Fuse 6 separate SEO Crews into single multi-agent Crew (Process.sequential + task.context) | Done |
 | P1.2 — Enable allow_delegation=True on coordinator agents (Editor, Strategist, Marketing, AudienceAnalyst) | Done |
 | P1.3 — Add Pydantic output schemas to all 6 SEO pipeline tasks (output_pydantic=) | Done |
+| Website auth handoff endpoints (`/api/auth/web/handoff`, `/api/auth/web/exchange`) + signed Clerk webhook receiver | Done |
 
 ## In Progress
 

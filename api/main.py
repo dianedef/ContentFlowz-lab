@@ -33,7 +33,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from api.routers import mesh_router, research_router, health_router, projects_router, newsletter_router, deployment_router, images_router, status_router, reels_router, psychology_router, me_router, settings_router, creator_profile_router, personas_router, idea_pool_router, affiliations_router, activity_router, work_domains_router, preview_router, analytics_public_router, analytics_router
+from api.routers import mesh_router, research_router, health_router, projects_router, newsletter_router, deployment_router, images_router, status_router, reels_router, psychology_router, me_router, settings_router, creator_profile_router, personas_router, idea_pool_router, affiliations_router, activity_router, work_domains_router, preview_router, analytics_public_router, analytics_router, auth_web_router, webhook_router
 from api.routers.scheduler import router as scheduler_router
 from api.routers.templates import router as templates_router
 from api.routers.runs import router as runs_router
@@ -280,6 +280,7 @@ app.add_middleware(
         "https://winflowz.com",       # Current production domain
         "https://www.winflowz.com",
         "https://app.winflowz.com",
+        "https://contentflow_site.vercel.app",
     ],
     allow_origin_regex=(
         r"https://("
@@ -319,6 +320,8 @@ app.include_router(health_router)
 
 # Domain routers (with /api prefix)
 app.include_router(me_router)
+app.include_router(auth_web_router)
+app.include_router(webhook_router)
 app.include_router(settings_router)
 app.include_router(creator_profile_router)
 app.include_router(personas_router)

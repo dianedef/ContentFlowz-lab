@@ -18,6 +18,7 @@ class CurrentUser(BaseModel):
 
     user_id: str
     email: str | None = None
+    bearer_token: str
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -49,4 +50,5 @@ def require_current_user(
     return CurrentUser(
         user_id=claims.user_id,
         email=claims.email,
+        bearer_token=credentials.credentials,
     )

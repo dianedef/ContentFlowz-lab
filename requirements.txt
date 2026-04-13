@@ -19,6 +19,7 @@ exa-py>=1.0.0,<2.0
 firecrawl-py>=0.0.1,<2.0
 beautifulsoup4>=4.12.0,<5.0
 requests>=2.31.0,<3.0
+svix>=1.28.0,<2.0
 
 # SEO & Research Tools
 advertools>=0.14.0,<1.0  # SEO keyword generation, crawling, sitemap analysis

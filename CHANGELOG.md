@@ -2,6 +2,16 @@
 
 All notable changes to Content Flows are documented here.
 
+## [2026-04-13]
+
+### Added
+- **Website auth handoff endpoints** — `POST /api/auth/web/handoff` and `POST /api/auth/web/exchange` provide a short-lived site-to-app session bridge for Flutter web.
+- **Signed Clerk webhook endpoint** — `POST /api/webhooks/clerk` verifies Svix signatures and provisions minimal product settings for Clerk users.
+
+### Changed
+- **Authenticated user context now carries the validated bearer token** so the backend can mint secure web handoffs without introducing a second token source.
+- **CORS allowlist updated for the website auth flow** so the marketing site can call the API during login handoff.
+
 ## [2026-04-12]
 
 ### Added
