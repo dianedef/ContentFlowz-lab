@@ -130,6 +130,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠ PageView migration failed (non-critical): {e}")
 
+    try:
+        from agents.seo.config.project_store import project_store
+        if project_store.db_client:
+            await project_store.ensure_table()
+            print("✅ Project table ensured")
+    except Exception as e:
+        print(f"⚠ Project table migration failed (non-critical): {e}")
+
     print("✅ API ready to serve requests")
 
     yield

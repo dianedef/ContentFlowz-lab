@@ -48,6 +48,48 @@ class ProjectStore:
                 "Database not configured. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN."
             )
 
+    async def ensure_table(self) -> None:
+        """Create the Project table if it does not exist."""
+        self._ensure_connected()
+
+        await self.db_client.execute(
+            """
+            CREATE TABLE IF NOT EXISTS Project (
+                id TEXT PRIMARY KEY,
+                userId TEXT NOT NULL,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                type TEXT NOT NULL DEFAULT 'github',
+                description TEXT,
+                isDefault INTEGER NOT NULL DEFAULT 0,
+                settings TEXT,
+                lastAnalyzedAt INTEGER,
+                createdAt INTEGER NOT NULL
+            )
+            """
+        )
+
+        await self.db_client.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_project_userId
+            ON Project(userId)
+            """
+        )
+
+        await self.db_client.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_project_userId_isDefault
+            ON Project(userId, isDefault)
+            """
+        )
+
+        await self.db_client.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_project_userId_url
+            ON Project(userId, url)
+            """
+        )
+
     def _row_to_project(self, row: tuple) -> Project:
         """Convert database row to Project model."""
         # Row columns: id, userId, name, url, type, description, isDefault, settings, lastAnalyzedAt, createdAt
