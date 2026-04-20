@@ -2,6 +2,17 @@
 
 All notable changes to Content Flows are documented here.
 
+## [2026-04-20]
+
+### Added
+- **Direct project create endpoint** — `POST /api/projects` now creates a project record directly from a GitHub URL, which matches the Flutter workspace management flow without forcing the full onboarding wizard.
+- **Bootstrap selection tests** — added targeted coverage for `/api/bootstrap` selection rules and default-project response mapping.
+
+### Changed
+- **Current project resolution now comes from `UserSettings.defaultProjectId`** — `/api/me`, `/api/bootstrap`, and project response mapping now treat the last-opened project stored in settings as the source of truth.
+- **Project response `is_default` is derived from user settings** instead of relying on the legacy `Project.isDefault` database flag.
+- **Project update now supports repository URL edits** through `PATCH /api/projects/{id}` with `github_url`.
+
 ## [2026-04-13]
 
 ### Added

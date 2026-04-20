@@ -203,6 +203,10 @@ class ConfirmProjectRequest(BaseModel):
 class UpdateProjectRequest(BaseModel):
     """Request to update project details"""
     name: Optional[str] = Field(default=None, description="New project name")
+    github_url: Optional[HttpUrl] = Field(
+        default=None,
+        description="Updated GitHub repository URL"
+    )
     description: Optional[str] = Field(default=None, description="New description")
     content_directories: Optional[List[ContentDirectoryConfig]] = Field(
         default=None,

@@ -20,12 +20,14 @@
 | P1.2 — Enable allow_delegation=True on coordinator agents (Editor, Strategist, Marketing, AudienceAnalyst) | Done |
 | P1.3 — Add Pydantic output schemas to all 6 SEO pipeline tasks (output_pydantic=) | Done |
 | Website auth handoff endpoints (`/api/auth/web/handoff`, `/api/auth/web/exchange`) + signed Clerk webhook receiver | Done |
+| Project selection contract aligned on `UserSettings.defaultProjectId` for `/api/me`, `/api/bootstrap`, and project responses | Done |
+| `POST /api/projects` + `PATCH /api/projects/{id}` (`github_url`) aligned with Flutter multi-project management | Done |
 
 ## In Progress
 
 | Pri | Task | Status |
 |-----|------|--------|
-| P0 | Feedback Admin v1 — déployer le backend FastAPI feedback sur le serveur | Code implémenté localement, déploiement + validation prod à faire |
+| P0 | Feedback Admin v1 — finaliser la config prod backend feedback | Backend live pour le texte, secrets Bunny/admin encore à configurer |
 
 ### Feedback Admin v1 (2026-04-19)
 
@@ -48,8 +50,12 @@ Fait:
 - [x] Déployer la nouvelle version du backend sur le serveur
 - [x] Redémarrer le process FastAPI après déploiement
 - [x] Vérifier que la table `FeedbackEntry` est bien créée
-- [ ] Vérifier que les variables déjà utilisées en prod sont bien présentes: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BUNNY_STORAGE_API_KEY`, `BUNNY_STORAGE_ZONE`, `BUNNY_STORAGE_REGION`
-- [ ] Ajouter les nouvelles variables: `FEEDBACK_ADMIN_EMAILS`, `FEEDBACK_SIGNING_SECRET`
+- [x] Vérifier que `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` sont bien présents en prod
+- [x] Ajouter `FEEDBACK_SIGNING_SECRET` en prod
+- [ ] Ajouter `FEEDBACK_ADMIN_EMAILS` en prod
+- [ ] Ajouter `BUNNY_STORAGE_API_KEY` en prod
+- [ ] Ajouter `BUNNY_STORAGE_ZONE` en prod
+- [ ] Vérifier ou ajouter `BUNNY_STORAGE_REGION` en prod si nécessaire
 
 Validation après déploiement:
 - [x] Tester un feedback texte anonyme depuis l'app
@@ -65,6 +71,8 @@ Note infra:
 - Le texte est déjà live sur `https://api.winflowz.com/api/feedback/text`
 - L'upload audio crée maintenant bien une `uploadUrl`, mais l'upload réel reste bloqué tant que `BUNNY_STORAGE_ZONE` et `BUNNY_STORAGE_API_KEY` ne sont pas configurés en prod
 - L'admin côté serveur reste bloqué tant que `FEEDBACK_ADMIN_EMAILS` n'est pas défini en prod
+- Le process PM2 live tourne actuellement depuis `/home/claude/contentflow_lab_deploy` pour éviter les changements non commités du repo principal
+- Au prochain déploiement backend, mettre à jour ce checkout clean puis redémarrer PM2
 
 ### Audit: Code (2026-04-07)
 

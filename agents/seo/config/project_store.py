@@ -374,6 +374,7 @@ class ProjectStore:
         self,
         project_id: str,
         name: Optional[str] = None,
+        url: Optional[str] = None,
         description: Optional[str] = None,
         content_directories: Optional[List[ContentDirectoryConfig]] = None,
         config_overrides: Optional[ProjectConfigOverrides] = None,
@@ -406,6 +407,10 @@ class ProjectStore:
         if name is not None:
             updates.append("name = ?")
             params.append(name)
+
+        if url is not None:
+            updates.append("url = ?")
+            params.append(url)
 
         if description is not None:
             updates.append("description = ?")

@@ -23,6 +23,7 @@ from agents.seo.config.project_store import project_store
 from agents.scheduler.tools.content_scanner import get_content_scanner
 from agents.scheduler.tools.cluster_scheduler import get_cluster_scheduler
 from api.dependencies.auth import CurrentUser, require_current_user
+from api.services.user_data_store import user_data_store
 
 
 router = APIRouter(
@@ -32,7 +33,7 @@ router = APIRouter(
 )
 
 
-def project_to_response(project: Project) -> ProjectResponse:
+def project_to_response(project: Project, *, default_project_id: str | None = None) -> ProjectResponse:
     """Convert Project model to response format."""
     return ProjectResponse(
         id=project.id,
@@ -41,11 +42,18 @@ def project_to_response(project: Project) -> ProjectResponse:
         url=project.url,
         type=project.type,
         description=project.description,
-        is_default=project.is_default,
+        is_default=project.id == default_project_id,
         settings=project.settings,
         last_analyzed_at=project.last_analyzed_at,
         created_at=project.created_at
     )
+
+
+async def get_user_default_project_id(user_id: str) -> str | None:
+    """Return the last-opened project id stored in user settings."""
+    settings = await user_data_store.get_user_settings(user_id)
+    default_project_id = settings.get("defaultProjectId")
+    return default_project_id if isinstance(default_project_id, str) else None
 
 
 async def require_owned_project(
@@ -98,6 +106,27 @@ async def onboard_project(
         name=request.name,
         description=request.description
     )
+
+
+@router.post(
+    "",
+    response_model=ProjectResponse,
+    summary="Create project",
+    description="Create a project record directly from a GitHub repository URL."
+)
+async def create_project(
+    request: OnboardProjectRequest,
+    current_user: CurrentUser = Depends(require_current_user),
+) -> Any:
+    """Create a project without running the full onboarding wizard."""
+    project = await project_store.create(
+        user_id=current_user.user_id,
+        name=request.name or str(request.github_url).rstrip("/").split("/")[-1],
+        url=str(request.github_url),
+        description=request.description,
+    )
+    default_project_id = await get_user_default_project_id(current_user.user_id)
+    return project_to_response(project, default_project_id=default_project_id)
 
 
 @router.post(
@@ -187,7 +216,8 @@ async def confirm_project(
 
     try:
         project = await project_onboarding_service.confirm_project(request)
-        return project_to_response(project)
+        default_project_id = await get_user_default_project_id(current_user.user_id)
+        return project_to_response(project, default_project_id=default_project_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -207,12 +237,15 @@ async def list_projects(
 ) -> ProjectListResponse:
     """Get all projects for current user."""
     projects = await project_store.get_by_user(current_user.user_id)
-    default_project = await project_store.get_default_project(current_user.user_id)
+    default_project_id = await get_user_default_project_id(current_user.user_id)
 
     return ProjectListResponse(
-        projects=[project_to_response(p) for p in projects],
+        projects=[
+            project_to_response(p, default_project_id=default_project_id)
+            for p in projects
+        ],
         total=len(projects),
-        default_project_id=default_project.id if default_project else None
+        default_project_id=default_project_id
     )
 
 
@@ -228,8 +261,9 @@ async def get_project(
 ) -> Any:
     """Get project by ID."""
     project = await require_owned_project(project_id, current_user)
+    default_project_id = await get_user_default_project_id(current_user.user_id)
 
-    return project_to_response(project)
+    return project_to_response(project, default_project_id=default_project_id)
 
 
 @router.patch(
@@ -248,6 +282,7 @@ async def update_project(
     project = await project_store.update(
         project_id=project_id,
         name=request.name,
+        url=str(request.github_url) if request.github_url else None,
         description=request.description,
         content_directories=request.content_directories,
         config_overrides=request.config_overrides,
@@ -257,7 +292,8 @@ async def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return project_to_response(project)
+    default_project_id = await get_user_default_project_id(current_user.user_id)
+    return project_to_response(project, default_project_id=default_project_id)
 
 
 @router.delete(
@@ -288,11 +324,15 @@ async def set_default_project(
 ) -> Any:
     """Set project as default."""
     await require_owned_project(project_id, current_user)
-    project = await project_store.set_default(current_user.user_id, project_id)
+    await user_data_store.update_user_settings(
+        current_user.user_id,
+        {"defaultProjectId": project_id},
+    )
+    project = await project_store.get_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return project_to_response(project)
+    return project_to_response(project, default_project_id=project_id)
 
 
 @router.post(
