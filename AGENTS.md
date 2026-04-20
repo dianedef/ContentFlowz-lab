@@ -124,6 +124,18 @@ pm2 logs contentflow
 pm2 restart contentflow
 ```
 
+---
+
+## Production DB (Turso / libSQL) — Critical Gotcha
+
+- Turso uses **SQLite (libSQL/Hrana)**, not MySQL/Postgres.
+- Any backend change that depends on **new tables/columns/indexes** must ship with a **schema migration** (or at minimum an idempotent `CREATE TABLE IF NOT EXISTS ...` on startup).
+- Symptom when you forget: runtime errors like `SQLite error: no such table: UserSettings`, which can cascade into 502s and app flows (onboarding/project selection) that appear "stuck" or reset on every login.
+
+**Rule of thumb**
+- New table (simple): add `ensure_*_table()` and call it during FastAPI startup (idempotent).
+- Column/constraint/backfill: add a versioned SQL migration and apply it as part of the deploy.
+
 ### Secrets Management (Doppler)
 
 ```bash

@@ -46,6 +46,12 @@ open http://localhost:8000/redoc
 - New routers should be added with auth, validation, and status/error handling consistent with existing FastAPI patterns.
 - Keep startup schema/migration logic defensive (`idempotent`, non-blocking where possible).
 
+## Turso / libSQL Schema Changes (Do Not Skip)
+
+- Production DB is **Turso (SQLite/libSQL)**.
+- If you introduce a new table/column/index that the API code relies on, ship the corresponding migration/ensure step in the same change.
+- Failure mode is misleading: a missing table (e.g. `UserSettings`) can make onboarding/project selection appear broken and can even trigger upstream 502s.
+
 ## Related Projects
 
 - `contentflow_app` — Flutter application and web shell.
