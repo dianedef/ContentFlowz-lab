@@ -21,11 +21,40 @@ class ResultSet:
 
 class Client:
     def __init__(self, url: str, auth_token: str | None = None) -> None:
-        self._conn = libsql.connect(
-            database=url,
-            auth_token=auth_token or "",
+        self._url = url
+        self._auth_token = auth_token or ""
+        self._conn = self._connect()
+        self._lock: asyncio.Lock | None = None
+
+    def _connect(self) -> libsql.Connection:
+        return libsql.connect(
+            database=self._url,
+            auth_token=self._auth_token,
             _check_same_thread=False,
         )
+
+    def _ensure_lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+
+    @staticmethod
+    def _should_reconnect(exc: Exception) -> bool:
+        message = str(exc).lower()
+        return (
+            "stream not found" in message
+            or "hrana" in message
+            or "websocket" in message
+            or "connection" in message
+            or "transport" in message
+        )
+
+    def _reconnect(self) -> None:
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+        self._conn = self._connect()
 
     async def execute(
         self,
@@ -42,10 +71,19 @@ class Client:
                 rows = []
             return ResultSet(rows=rows)
 
-        return await asyncio.to_thread(_run)
+        async with self._ensure_lock():
+            for attempt in range(2):
+                try:
+                    return await asyncio.to_thread(_run)
+                except Exception as exc:
+                    if attempt == 0 and self._should_reconnect(exc):
+                        await asyncio.to_thread(self._reconnect)
+                        continue
+                    raise
 
     async def close(self) -> None:
-        await asyncio.to_thread(self._conn.close)
+        async with self._ensure_lock():
+            await asyncio.to_thread(self._conn.close)
 
 
 def create_client(*, url: str, auth_token: str | None = None, **_: Any) -> Client:
