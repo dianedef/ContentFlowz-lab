@@ -1,4 +1,4 @@
-const cwd = process.env.CF_MAIN_REPO || "/home/claude/ContentFlow/contentflow_lab";
+const cwd = process.env.CF_MAIN_REPO || "/home/claude/contentflow/contentflow_lab";
 
 module.exports = {
   apps: [{
