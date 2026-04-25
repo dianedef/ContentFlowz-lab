@@ -1,3 +1,25 @@
+---
+artifact: technical_guidelines
+metadata_schema_version: "1.0"
+artifact_version: "0.1.0"
+project: contentflow_lab
+created: "2026-04-25"
+updated: "2026-04-25"
+status: draft
+source_skill: sf-docs
+scope: guidelines
+owner: unknown
+confidence: low
+risk_level: medium
+security_impact: unknown
+docs_impact: yes
+linked_systems: []
+depends_on: []
+supersedes: []
+evidence: []
+next_review: "unknown"
+next_step: /sf-docs audit GUIDELINES.md
+---
 # Development Guidelines
 
 ## Scope
