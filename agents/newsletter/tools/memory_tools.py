@@ -15,6 +15,20 @@ from crewai.tools import tool
 # Lazy import flag — checked on first tool call
 _memory_checked = False
 _memory_service = None
+_runtime_user_id: str | None = None
+_runtime_project_id: str | None = None
+
+
+def set_memory_tool_scope(*, user_id: str | None, project_id: str | None) -> None:
+    """Bind request scope for newsletter memory tools."""
+    global _runtime_user_id, _runtime_project_id
+    _runtime_user_id = user_id
+    _runtime_project_id = project_id
+
+
+def clear_memory_tool_scope() -> None:
+    """Clear request scope after a newsletter run."""
+    set_memory_tool_scope(user_id=None, project_id=None)
 
 
 def _get_memory():
@@ -51,7 +65,15 @@ def recall_project_context(query: str) -> str:
         return "Memory unavailable — proceeding without project context."
 
     try:
-        context = memory.load_context(query, limit=10)
+        if _runtime_user_id:
+            context = memory.load_project_context(
+                query,
+                user_id=_runtime_user_id,
+                project_id=_runtime_project_id,
+                limit=10,
+            )
+        else:
+            context = memory.load_context(query, limit=10)
         if not context:
             return f"No memories found for: {query}"
         return context
@@ -78,6 +100,17 @@ def recall_past_newsletters(limit: int = 10) -> str:
         return "Memory unavailable — no past newsletter history accessible."
 
     try:
+        if _runtime_user_id:
+            scoped = memory.load_project_context(
+                "past newsletter generation topics covered",
+                user_id=_runtime_user_id,
+                project_id=_runtime_project_id,
+                limit=limit,
+            )
+            if not scoped:
+                return "No past newsletters found in memory — this may be the first run."
+            return scoped
+
         entries = memory.search(
             "past newsletter generation topics covered",
             limit=limit,
@@ -111,10 +144,18 @@ def recall_brand_voice() -> str:
         return "Memory unavailable — using default writing style."
 
     try:
-        context = memory.load_context(
-            "brand voice writing style tone guidelines",
-            limit=10,
-        )
+        if _runtime_user_id:
+            context = memory.load_project_context(
+                "brand voice writing style tone guidelines",
+                user_id=_runtime_user_id,
+                project_id=_runtime_project_id,
+                limit=10,
+            )
+        else:
+            context = memory.load_context(
+                "brand voice writing style tone guidelines",
+                limit=10,
+            )
         if not context:
             return "No brand voice guidelines found in memory — using default style."
         return context

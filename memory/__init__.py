@@ -13,6 +13,10 @@ Usage:
     memory.store_generation("newsletter", "Weekly AI Digest", ["AI", "agents"])
 """
 
-from memory.memory_service import MemoryService, get_memory_service
+from memory.memory_service import (
+    MemoryService,
+    build_runtime_memory_service,
+    get_memory_service,
+)
 
-__all__ = ["MemoryService", "get_memory_service"]
+__all__ = ["MemoryService", "get_memory_service", "build_runtime_memory_service"]

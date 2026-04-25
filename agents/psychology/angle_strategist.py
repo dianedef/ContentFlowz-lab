@@ -7,17 +7,20 @@ persona (pain points, goals, language) and produces strategic content angles.
 This agent uses no tools — it reasons purely over the provided context.
 """
 
+from typing import Any
+
 from crewai import Agent, Task, Crew
 from agents.shared.prompt_loader import load_prompt
 
 
-def _build_agent() -> Agent:
+def _build_agent(llm: Any | None = None) -> Agent:
     p = load_prompt("psychology", "angle_strategist")
     return Agent(
         role=p["role"],
         goal=p["goal"],
         backstory=p["backstory"],
         tools=[],
+        llm=llm,
         verbose=False,
     )
 
@@ -31,6 +34,7 @@ def run_angle_generation(
     count: int = 5,
     seo_signals: list[dict] | None = None,
     trending_signals: list[dict] | None = None,
+    llm: Any | None = None,
 ) -> dict:
     """Run the Angle Strategist to generate content angles.
 
@@ -49,7 +53,16 @@ def run_angle_generation(
     """
     import json
 
-    agent = _build_agent()
+    agent = _build_agent(llm=llm)
+
+    pain_points = persona_data.get("pain_points") or persona_data.get("painPoints") or []
+    content_preferences = (
+        persona_data.get("content_preferences")
+        or persona_data.get("contentPreferences")
+        or {}
+    )
+    language = persona_data.get("language", {}) or {}
+    triggers = language.get("triggers", {})
 
     content_type_instruction = (
         f"Focus on {content_type} format." if content_type else "Suggest the best format for each angle (article, newsletter, short, social_post)."
@@ -90,10 +103,10 @@ def run_angle_generation(
             creator_positioning=json.dumps(creator_positioning),
             narrative_summary=narrative_summary or "Not available",
             persona_name=persona_data.get("name", "Unknown"),
-            pain_points=json.dumps(persona_data.get("painPoints", [])),
+            pain_points=json.dumps(pain_points),
             goals=json.dumps(persona_data.get("goals", [])),
-            language_triggers=json.dumps(persona_data.get("language", {}).get("triggers", [])),
-            content_preferences=json.dumps(persona_data.get("contentPreferences", {})),
+            language_triggers=json.dumps(triggers),
+            content_preferences=json.dumps(content_preferences),
             seo_section=seo_section,
             trending_section=trending_section,
             content_type_instruction=content_type_instruction,

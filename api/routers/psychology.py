@@ -8,6 +8,14 @@ agent operations with polling-based status retrieval.
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from api.dependencies.auth import CurrentUser, require_current_user
 from api.services.job_store import job_store
+from api.services.ai_runtime_service import AIRuntimeServiceError, ai_runtime_service
+from api.services.user_llm_service import (
+    DEFAULT_OPENROUTER_MODEL,
+    NEWSLETTER_OPENROUTER_MODEL,
+    AIRuntimeResolutionError,
+    UserLLMCredentialError,
+    user_llm_service,
+)
 from status.audit import actor_from_agent
 from api.models.psychology import (
     NarrativeSynthesisRequest,
@@ -24,6 +32,14 @@ import json
 import uuid
 
 router = APIRouter(prefix="/api/psychology", tags=["Psychology Engine"])
+
+
+def _raise_runtime_http(exc: Exception) -> None:
+    if isinstance(exc, AIRuntimeServiceError):
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    if isinstance(exc, AIRuntimeResolutionError):
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 async def _create_job(task_id: str, job_type: str, user_id: str, message: str) -> None:
@@ -50,17 +66,27 @@ async def _get_owned_job(task_id: str, user_id: str) -> dict:
 # Narrative Synthesis (Creator Brain)
 # ─────────────────────────────────────────────────
 
-async def _run_synthesis_task(task_id: str, request: NarrativeSynthesisRequest):
+async def _run_synthesis_task(
+    task_id: str,
+    user_id: str,
+    request: NarrativeSynthesisRequest,
+):
     """Background task: run Creator Psychologist agent"""
     try:
         from agents.psychology.creator_psychologist import run_narrative_synthesis
 
+        llm = await user_llm_service.get_crewai_llm(
+            user_id,
+            model=DEFAULT_OPENROUTER_MODEL,
+            route="psychology.synthesize_narrative",
+        )
         result = run_narrative_synthesis(
             profile_id=request.profile_id,
-            entries=[{"content": eid, "entryType": "reflection"} for eid in request.entry_ids],
+            entries=request.to_entry_payloads(),
             current_voice=request.current_voice,
             current_positioning=request.current_positioning,
             chapter_title=request.chapter_title,
+            llm=llm,
         )
         await job_store.update(
             task_id,
@@ -87,6 +113,14 @@ async def synthesize_narrative(
     current_user: CurrentUser = Depends(require_current_user),
 ):
     """Trigger narrative synthesis from creator entries (async)."""
+    try:
+        await user_llm_service.get_openrouter_key(
+            current_user.user_id,
+            route="psychology.synthesize_narrative",
+        )
+    except UserLLMCredentialError as exc:
+        _raise_runtime_http(exc)
+
     task_id = str(uuid.uuid4())
     await _create_job(
         task_id,
@@ -94,7 +128,7 @@ async def synthesize_narrative(
         current_user.user_id,
         "Narrative synthesis started.",
     )
-    background_tasks.add_task(_run_synthesis_task, task_id, request)
+    background_tasks.add_task(_run_synthesis_task, task_id, current_user.user_id, request)
     return {"task_id": task_id, "status": "running"}
 
 
@@ -111,15 +145,25 @@ async def get_synthesis_status(
 # Persona Refinement (Customer Brain)
 # ─────────────────────────────────────────────────
 
-async def _run_refinement_task(task_id: str, request: PersonaRefinementRequest):
+async def _run_refinement_task(
+    task_id: str,
+    user_id: str,
+    request: PersonaRefinementRequest,
+):
     """Background task: run Audience Analyst agent"""
     try:
         from agents.psychology.audience_analyst import run_persona_refinement
 
+        llm = await user_llm_service.get_crewai_llm(
+            user_id,
+            model=DEFAULT_OPENROUTER_MODEL,
+            route="psychology.refine_persona",
+        )
         result = run_persona_refinement(
             persona=request.current_persona.to_canonical_dict(),
             analytics_data=request.analytics_data,
             content_performance=request.content_performance,
+            llm=llm,
         )
         await job_store.update(
             task_id,
@@ -146,6 +190,14 @@ async def refine_persona(
     current_user: CurrentUser = Depends(require_current_user),
 ):
     """Trigger persona refinement using analytics data (async)."""
+    try:
+        await user_llm_service.get_openrouter_key(
+            current_user.user_id,
+            route="psychology.refine_persona",
+        )
+    except UserLLMCredentialError as exc:
+        _raise_runtime_http(exc)
+
     task_id = str(uuid.uuid4())
     await _create_job(
         task_id,
@@ -153,19 +205,37 @@ async def refine_persona(
         current_user.user_id,
         "Persona refinement started.",
     )
-    background_tasks.add_task(_run_refinement_task, task_id, request)
+    background_tasks.add_task(_run_refinement_task, task_id, current_user.user_id, request)
     return {"task_id": task_id, "status": "running"}
+
+
+@router.get("/refinement-status/{task_id}")
+async def get_refinement_status(
+    task_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
+):
+    """Poll for persona refinement result."""
+    return await _get_owned_job(task_id, current_user.user_id)
 
 
 # ─────────────────────────────────────────────────
 # Angle Generation (The Bridge)
 # ─────────────────────────────────────────────────
 
-async def _run_angle_task(task_id: str, request: AngleGenerationRequest):
+async def _run_angle_task(
+    task_id: str,
+    user_id: str,
+    request: AngleGenerationRequest,
+):
     """Background task: run Angle Strategist agent"""
     try:
         from agents.psychology.angle_strategist import run_angle_generation
 
+        llm = await user_llm_service.get_crewai_llm(
+            user_id,
+            model=DEFAULT_OPENROUTER_MODEL,
+            route="psychology.generate_angles",
+        )
         result = run_angle_generation(
             creator_voice=request.creator_voice,
             creator_positioning=request.creator_positioning,
@@ -175,6 +245,7 @@ async def _run_angle_task(task_id: str, request: AngleGenerationRequest):
             count=request.count,
             seo_signals=request.seo_signals,
             trending_signals=request.trending_signals,
+            llm=llm,
         )
         await job_store.update(
             task_id,
@@ -201,6 +272,14 @@ async def generate_angles(
     current_user: CurrentUser = Depends(require_current_user),
 ):
     """Trigger content angle generation (async)."""
+    try:
+        await user_llm_service.get_openrouter_key(
+            current_user.user_id,
+            route="psychology.generate_angles",
+        )
+    except UserLLMCredentialError as exc:
+        _raise_runtime_http(exc)
+
     task_id = str(uuid.uuid4())
     await _create_job(
         task_id,
@@ -208,7 +287,7 @@ async def generate_angles(
         current_user.user_id,
         "Angle generation started.",
     )
-    background_tasks.add_task(_run_angle_task, task_id, request)
+    background_tasks.add_task(_run_angle_task, task_id, current_user.user_id, request)
     return {"task_id": task_id, "status": "running"}
 
 
@@ -260,6 +339,27 @@ _PIPELINE_ACTOR_MAP = {
     "social_post": "social_post_pipeline",
 }
 
+_DISPATCH_ROUTE_BY_FORMAT = {
+    "article": "psychology.dispatch_pipeline.article",
+    "newsletter": "psychology.dispatch_pipeline.newsletter",
+    "short": "psychology.dispatch_pipeline.short",
+    "social_post": "psychology.dispatch_pipeline.social_post",
+}
+
+_DISPATCH_REQUIRED_PROVIDERS = {
+    "article": ["openrouter", "exa"],
+    "newsletter": ["openrouter", "exa"],
+    "short": ["openrouter"],
+    "social_post": ["openrouter"],
+}
+
+_DISPATCH_OPTIONAL_PROVIDERS = {
+    "article": ["firecrawl"],
+    "newsletter": [],
+    "short": [],
+    "social_post": [],
+}
+
 
 def _pipeline_actor_for_format(fmt: str):
     """Return the canonical audit actor for a supported pipeline format."""
@@ -282,69 +382,107 @@ async def _run_pipeline_task(
         svc = get_status_service()
 
         fmt = request.target_format
+        route_id = _DISPATCH_ROUTE_BY_FORMAT.get(fmt, "psychology.dispatch_pipeline")
+        resolution = await ai_runtime_service.preflight_providers(
+            user_id=user_id,
+            route=route_id,
+            required_providers=_DISPATCH_REQUIRED_PROVIDERS.get(fmt, ["openrouter"]),
+            optional_providers=_DISPATCH_OPTIONAL_PROVIDERS.get(fmt, []),
+        )
         angle = request.angle_data
         voice = request.creator_voice or {}
         body = ""
-
-        # Load project memory context to avoid duplicate topics
-        existing_content_context = ""
-        try:
-            from memory.memory_service import get_memory_service
-            mem = get_memory_service()
-            existing_content_context = mem.load_project_context(
-                query=angle.get("title", ""),
-                user_id=user_id,
-                project_id=request.project_id,
-                limit=10,
+        llm_model = (
+            NEWSLETTER_OPENROUTER_MODEL
+            if fmt == "newsletter"
+            else DEFAULT_OPENROUTER_MODEL
+        )
+        with ai_runtime_service.bind_provider_env(resolution):
+            llm = await user_llm_service.get_crewai_llm(
+                user_id,
+                model=llm_model,
+                route=route_id,
             )
-        except Exception:
-            pass  # Memory service is optional
 
-        if fmt == "article":
-            from agents.seo.seo_crew import SEOContentCrew
-            crew = SEOContentCrew()
-            brand_voice_str = json.dumps(voice) if voice else None
-            if existing_content_context and brand_voice_str:
-                brand_voice_str += f"\n\n{existing_content_context}"
-            result = crew.generate_content(
-                target_keyword=request.seo_keyword or angle.get("title", ""),
-                brand_voice=brand_voice_str,
-                word_count=2500,
-            )
-            body = result.get("outputs", {}).get("article", str(result))
+            # Load project memory context to avoid duplicate topics
+            existing_content_context = ""
+            try:
+                from memory.memory_service import get_memory_service
+                mem = get_memory_service()
+                existing_content_context = mem.load_project_context(
+                    query=angle.get("title", ""),
+                    user_id=user_id,
+                    project_id=request.project_id,
+                    limit=10,
+                )
+            except Exception:
+                pass  # Memory service is optional
 
-        elif fmt == "newsletter":
-            from agents.newsletter.newsletter_crew import NewsletterCrew
-            crew = NewsletterCrew()
-            result = crew.generate_newsletter(
-                topics=[angle.get("title", "")],
-                target_audience=angle.get("pain_point_addressed", "general"),
-            )
-            body = result.get("html", "") or result.get("content", str(result))
+            if fmt == "article":
+                from agents.seo.seo_crew import SEOContentCrew
+                crew = SEOContentCrew(
+                    llm_model=llm,
+                    track_status=False,
+                    include_firecrawl_tools=resolution.has_optional_provider("firecrawl"),
+                )
+                brand_voice_str = json.dumps(voice) if voice else None
+                if existing_content_context and brand_voice_str:
+                    brand_voice_str += f"\n\n{existing_content_context}"
+                result = crew.generate_content(
+                    target_keyword=request.seo_keyword or angle.get("title", ""),
+                    brand_voice=brand_voice_str,
+                    word_count=2500,
+                )
+                outputs = result.get("outputs", {})
+                body = outputs.get("final_article") or outputs.get("article") or str(result)
 
-        elif fmt == "short":
-            from agents.short.short_crew import ShortContentCrew
-            crew = ShortContentCrew()
-            result = crew.generate_short(
-                angle=angle,
-                creator_voice=voice,
-                project_id=request.project_id,
-            )
-            body = result.get("script", str(result))
+            elif fmt == "newsletter":
+                from agents.newsletter.newsletter_crew import NewsletterCrew
+                from agents.newsletter.schemas.newsletter_schemas import (
+                    NewsletterConfig,
+                    NewsletterTone,
+                )
 
-        elif fmt == "social_post":
-            from agents.social.social_crew import SocialPostCrew
-            crew = SocialPostCrew()
-            result = crew.generate_social_post(
-                angle=angle,
-                creator_voice=voice,
-                project_id=request.project_id,
-            )
-            posts = result.get("posts", [])
-            body = json.dumps(posts, indent=2) if posts else str(result)
+                crew = NewsletterCrew(llm_model=llm, use_gmail=False, track_status=False)
+                result = crew.generate_newsletter(
+                    NewsletterConfig(
+                        name=angle.get("title", "Generated newsletter"),
+                        topics=[angle.get("title", "")],
+                        target_audience=angle.get("pain_point_addressed", "general"),
+                        tone=NewsletterTone.PROFESSIONAL,
+                        include_email_insights=False,
+                    ),
+                    user_id=user_id,
+                    project_id=request.project_id,
+                )
+                draft = result.get("draft", {})
+                body = draft.get("plain_text") or draft.get("html_content") or str(result)
 
-        else:
-            raise ValueError(f"Unknown format: {fmt}")
+            elif fmt == "short":
+                from agents.short.short_crew import ShortContentCrew
+                crew = ShortContentCrew(llm_model=llm)
+                result = crew.generate_short(
+                    angle=angle,
+                    creator_voice=voice,
+                    project_id=request.project_id,
+                    create_content_record=False,
+                )
+                body = result.get("script", str(result))
+
+            elif fmt == "social_post":
+                from agents.social.social_crew import SocialPostCrew
+                crew = SocialPostCrew(llm_model=llm)
+                result = crew.generate_social_post(
+                    angle=angle,
+                    creator_voice=voice,
+                    project_id=request.project_id,
+                    create_content_record=False,
+                )
+                posts = result.get("posts", [])
+                body = json.dumps(posts, indent=2) if posts else str(result)
+
+            else:
+                raise ValueError(f"Unknown format: {fmt}")
 
         # Save body and transition to pending_review
         pipeline_actor = _pipeline_actor_for_format(fmt)
@@ -432,6 +570,17 @@ async def dispatch_pipeline(
             detail=f"Unknown format '{fmt}'. Valid: {list(_FORMAT_MAP.keys())}",
         )
 
+    route_id = _DISPATCH_ROUTE_BY_FORMAT.get(fmt, "psychology.dispatch_pipeline")
+    try:
+        await ai_runtime_service.preflight_providers(
+            user_id=current_user.user_id,
+            route=route_id,
+            required_providers=_DISPATCH_REQUIRED_PROVIDERS.get(fmt, ["openrouter"]),
+            optional_providers=_DISPATCH_OPTIONAL_PROVIDERS.get(fmt, []),
+        )
+    except Exception as exc:
+        _raise_runtime_http(exc)
+
     content_type, source_robot = _FORMAT_MAP[fmt]
     task_id = str(uuid.uuid4())
     title = request.angle_data.get("title", f"Untitled {fmt}")
@@ -447,9 +596,16 @@ async def dispatch_pipeline(
         raise HTTPException(
             status_code=409,
             detail={
-                "message": f"Similar content already exists: '{duplicate['title']}' (status: {duplicate['status']})",
-                "existing_content_id": duplicate["id"],
-                "existing_title": duplicate["title"],
+                "code": "content_duplicate_conflict",
+                "message": "Similar content already exists.",
+                "kind": "business_conflict",
+                "route": "psychology.dispatch_pipeline",
+                "retryable": False,
+                "details": {
+                    "existingContentId": duplicate["id"],
+                    "existingTitle": duplicate["title"],
+                    "existingStatus": duplicate["status"],
+                },
             },
         )
 

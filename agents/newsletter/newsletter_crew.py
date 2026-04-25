@@ -9,7 +9,7 @@ Uses:
 - SendGrid for mass delivery
 """
 
-from typing import List, Optional, Dict, Any
+from typing import Any, List, Optional, Dict
 from crewai import Agent, Task, Crew, Process
 from dotenv import load_dotenv
 import os
@@ -40,9 +40,15 @@ if is_imap_backend():
 # Conditional memory import (graceful degradation)
 try:
     from memory import get_memory_service
+    from agents.newsletter.tools.memory_tools import (
+        clear_memory_tool_scope,
+        set_memory_tool_scope,
+    )
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
+    set_memory_tool_scope = None
+    clear_memory_tool_scope = None
 
 # Conditional status tracking (graceful degradation)
 try:
@@ -64,8 +70,9 @@ class NewsletterCrew:
 
     def __init__(
         self,
-        llm_model: Optional[str] = None,
-        use_gmail: bool = True
+        llm_model: Any | None = None,
+        use_gmail: bool = True,
+        track_status: bool = True,
     ):
         """
         Initialize Newsletter Crew.
@@ -78,6 +85,7 @@ class NewsletterCrew:
         self.llm_model = llm_model or config["llm_model"]
         self.use_gmail = use_gmail
         self.email_backend = EMAIL_BACKEND
+        self.track_status = track_status
 
         # Initialize agents
         print("Initializing Newsletter Crew...")
@@ -90,6 +98,8 @@ class NewsletterCrew:
         self,
         config: NewsletterConfig,
         competitor_emails: Optional[List[str]] = None,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a complete newsletter through multi-agent workflow.
@@ -112,7 +122,7 @@ class NewsletterCrew:
 
         # Status tracking: create content record
         status_record_id = None
-        if STATUS_AVAILABLE:
+        if self.track_status and STATUS_AVAILABLE:
             try:
                 status_svc = get_status_service()
                 record = status_svc.create_content(
@@ -154,26 +164,50 @@ class NewsletterCrew:
                 sections = []
 
                 # Load brand voice
-                brand_ctx = memory.load_context("brand voice writing style tone guidelines")
+                if user_id:
+                    brand_ctx = memory.load_project_context(
+                        "brand voice writing style tone guidelines",
+                        user_id=user_id,
+                        project_id=project_id,
+                        limit=10,
+                    )
+                else:
+                    brand_ctx = memory.load_context("brand voice writing style tone guidelines")
                 if brand_ctx:
                     sections.append(brand_ctx)
                     print("  ✓ Brand voice loaded")
 
                 # Load past newsletters for deduplication
-                past_ctx = memory.load_context(
-                    "past newsletter generation topics covered",
-                    agent_id="newsletter",
-                    limit=10,
-                )
+                if user_id:
+                    past_ctx = memory.load_project_context(
+                        "past newsletter generation topics covered",
+                        user_id=user_id,
+                        project_id=project_id,
+                        limit=10,
+                    )
+                else:
+                    past_ctx = memory.load_context(
+                        "past newsletter generation topics covered",
+                        agent_id="newsletter",
+                        limit=10,
+                    )
                 if past_ctx:
                     sections.append(past_ctx)
                     print("  ✓ Past newsletters loaded")
 
                 # Load content inventory
-                inventory_ctx = memory.load_context(
-                    "published content articles inventory",
-                    limit=15,
-                )
+                if user_id:
+                    inventory_ctx = memory.load_project_context(
+                        "published content articles inventory",
+                        user_id=user_id,
+                        project_id=project_id,
+                        limit=15,
+                    )
+                else:
+                    inventory_ctx = memory.load_context(
+                        "published content articles inventory",
+                        limit=15,
+                    )
                 if inventory_ctx:
                     sections.append(inventory_ctx)
                     print("  ✓ Content inventory loaded")
@@ -264,11 +298,13 @@ class NewsletterCrew:
 
         print("\n🚀 Running newsletter generation pipeline...")
         newsletter_actor = actor_from_agent("newsletter")
+        if set_memory_tool_scope is not None:
+            set_memory_tool_scope(user_id=user_id, project_id=project_id)
         try:
             crew_output = crew.kickoff()
         except Exception as e:
             # Status tracking: mark as failed
-            if STATUS_AVAILABLE and status_record_id:
+            if self.track_status and STATUS_AVAILABLE and status_record_id:
                 try:
                     status_svc = get_status_service()
                     status_svc.transition(status_record_id, "failed", newsletter_actor, reason=str(e))
@@ -276,6 +312,9 @@ class NewsletterCrew:
                 except Exception as se:
                     print(f"⚠ Status tracking failed transition error: {se}")
             raise
+        finally:
+            if clear_memory_tool_scope is not None:
+                clear_memory_tool_scope()
 
         # Parse results
         results["stages"]["research"] = research_task.output.raw if research_task.output else None
@@ -307,14 +346,28 @@ class NewsletterCrew:
             try:
                 memory = get_memory_service()
                 topics_covered = config.topics
-                memory.store_generation(
-                    content_type="newsletter",
-                    title=draft.subject_line,
-                    topics=topics_covered,
-                    summary=f"Newsletter '{config.name}' with {draft.word_count} words, "
+                if user_id:
+                    memory.store_generation_scoped(
+                        content_type="newsletter",
+                        title=draft.subject_line,
+                        user_id=user_id,
+                        project_id=project_id,
+                        topics=topics_covered,
+                        summary=(
+                            f"Newsletter '{config.name}' with {draft.word_count} words, "
                             f"{len(draft.sections)} sections. "
-                            f"Topics: {', '.join(topics_covered)}.",
-                )
+                            f"Topics: {', '.join(topics_covered)}."
+                        ),
+                    )
+                else:
+                    memory.store_generation(
+                        content_type="newsletter",
+                        title=draft.subject_line,
+                        topics=topics_covered,
+                        summary=f"Newsletter '{config.name}' with {draft.word_count} words, "
+                                f"{len(draft.sections)} sections. "
+                                f"Topics: {', '.join(topics_covered)}.",
+                    )
                 print("🧠 Generation record stored in memory")
             except Exception as e:
                 print(f"⚠ Failed to store generation record (non-critical): {e}")
@@ -328,7 +381,7 @@ class NewsletterCrew:
             print(f"Archived {archived_count} emails")
 
         # Status tracking: mark as generated → pending_review
-        if STATUS_AVAILABLE and status_record_id:
+        if self.track_status and STATUS_AVAILABLE and status_record_id:
             try:
                 status_svc = get_status_service()
                 preview = str(crew_output)[:500] if crew_output else None

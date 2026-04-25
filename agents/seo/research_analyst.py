@@ -39,7 +39,12 @@ class ResearchAnalystAgent:
     First agent in the SEO content generation pipeline.
     """
     
-    def __init__(self, llm_model: str = "groq/mixtral-8x7b-32768", use_consensus_ai: Optional[bool] = None):
+    def __init__(
+        self,
+        llm_model: str = "groq/mixtral-8x7b-32768",
+        use_consensus_ai: Optional[bool] = None,
+        include_firecrawl_tools: bool = True,
+    ):
         """
         Initialize Research Analyst with research tools.
 
@@ -49,6 +54,7 @@ class ResearchAnalystAgent:
         """
         self.llm_model = llm_model
         self.use_consensus_ai = use_consensus_ai if use_consensus_ai is not None else AI_TOOL_SETTINGS.get("use_consensus_ai", False)
+        self.include_firecrawl_tools = include_firecrawl_tools
 
         # Initialize tools
         self.serp_analyzer = SERPAnalyzer()
@@ -69,9 +75,10 @@ class ResearchAnalystAgent:
             extract_ranking_patterns_tool,
             exa_search,
             exa_find_similar,
-            scrape_url,
-            crawl_site,
         ]
+
+        if self.include_firecrawl_tools:
+            tools.extend([scrape_url, crawl_site])
 
         if self.use_consensus_ai:
             tools.append(consensus_deep_search_tool)

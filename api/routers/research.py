@@ -3,8 +3,8 @@
 IMPORTANT: Uses lazy imports for heavy agent dependencies.
 """
 
-from fastapi import APIRouter, Depends
-from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
 import time
 import re
 from typing import Any, TYPE_CHECKING
@@ -14,8 +14,14 @@ from api.models.research import (
     CompetitorAnalysisResponse,
     CompetitorInfo,
 )
-from api.dependencies.auth import require_current_user
-from api.dependencies import get_research_analyst
+from api.dependencies.auth import CurrentUser, require_current_user
+from api.services.ai_runtime_service import AIRuntimeServiceError, ai_runtime_service
+from api.services.user_llm_service import (
+    DEFAULT_OPENROUTER_MODEL,
+    AIRuntimeResolutionError,
+    UserLLMCredentialError,
+    user_llm_service,
+)
 
 # Type hint only - not loaded at runtime
 if TYPE_CHECKING:
@@ -26,6 +32,16 @@ router = APIRouter(
     tags=["Research & Analysis"],
     dependencies=[Depends(require_current_user)],
 )
+
+
+def _raise_runtime_http(exc: Exception) -> None:
+    if isinstance(exc, AIRuntimeServiceError):
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    if isinstance(exc, AIRuntimeResolutionError):
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    if isinstance(exc, UserLLMCredentialError):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post(
@@ -50,48 +66,85 @@ router = APIRouter(
 )
 async def competitor_analysis(
     request: CompetitorAnalysisRequest,
-    analyst: "ResearchAnalystAgent" = Depends(get_research_analyst)
+    current_user: CurrentUser = Depends(require_current_user),
 ) -> Any:
     """Analyze competitors for given keywords using the Research Analyst agent."""
     start_time = time.time()
+    keywords = request.normalized_keywords()
+    if not keywords:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one keyword is required for competitor analysis.",
+        )
 
-    # Update analyst settings if provided in request
-    if hasattr(analyst, "use_consensus_ai"):
-        analyst.use_consensus_ai = request.use_consensus_ai
-        if hasattr(analyst, "_create_agent"):
-            analyst.agent = analyst._create_agent()
+    competitor_domains = request.normalized_competitor_domains()
 
-    primary_keyword = request.keywords[0]
+    route_id = "research.competitor_analysis"
+    try:
+        resolution = await ai_runtime_service.preflight_providers(
+            user_id=current_user.user_id,
+            route=route_id,
+            required_providers=["openrouter", "exa"],
+            optional_providers=["firecrawl"],
+        )
+    except Exception as exc:
+        _raise_runtime_http(exc)
+
+    primary_keyword = keywords[0]
 
     try:
-        # Run the CrewAI analysis — returns a CrewOutput object
-        crew_result = analyst.run_analysis(
-            target_keyword=primary_keyword,
-            competitor_domains=request.keywords[1:] if len(request.keywords) > 1 else None,
-        )
+        with ai_runtime_service.bind_provider_env(resolution):
+            llm = await user_llm_service.get_crewai_llm(
+                current_user.user_id,
+                model=DEFAULT_OPENROUTER_MODEL,
+                route=route_id,
+            )
+            from agents.seo.research_analyst import ResearchAnalystAgent
 
-        # Extract raw text from CrewOutput
-        raw_text = str(getattr(crew_result, "raw", crew_result))
+            analyst = ResearchAnalystAgent(
+                llm_model=llm,
+                use_consensus_ai=request.use_consensus_ai,
+                include_firecrawl_tools=resolution.has_optional_provider("firecrawl"),
+            )
+            if hasattr(analyst, "use_consensus_ai"):
+                analyst.use_consensus_ai = request.use_consensus_ai
+                if hasattr(analyst, "_create_agent"):
+                    analyst.agent = analyst._create_agent()
 
-        competitors, common_topics, content_opportunities, recommended_topics = _parse_analysis_output(
-            raw_text, primary_keyword, request.keywords
-        )
+            crew_result = analyst.run_analysis(
+                target_keyword=primary_keyword,
+                competitor_domains=competitor_domains or (keywords[1:] if len(keywords) > 1 else None),
+            )
 
+            raw_text = str(getattr(crew_result, "raw", crew_result))
+            competitors, common_topics, content_opportunities, recommended_topics = _parse_analysis_output(
+                raw_text, primary_keyword, keywords
+            )
+    except (AIRuntimeServiceError, AIRuntimeResolutionError, UserLLMCredentialError) as exc:
+        _raise_runtime_http(exc)
     except Exception as exc:
-        # If the agent fails (e.g. missing API key, rate limit), fall back gracefully
-        print(f"[research] Agent analysis failed: {exc}")
-        competitors = []
-        common_topics = []
-        content_opportunities = []
-        recommended_topics = []
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "ai_runtime_operator_provider_unavailable",
+                "message": f"Competitor analysis failed before useful output: {exc}",
+                "kind": "ai_runtime",
+                "route": route_id,
+                "retryable": True,
+                "mode": resolution.mode,
+                "provider": None,
+                "settingsPath": None,
+                "details": None,
+            },
+        ) from exc
 
     return CompetitorAnalysisResponse(
-        keywords=request.keywords,
+        keywords=keywords,
         competitors=competitors,
         common_topics=common_topics,
         content_opportunities=content_opportunities,
         recommended_topics=recommended_topics,
-        analysis_timestamp=datetime.utcnow().isoformat(),
+        analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         processing_time_seconds=round(time.time() - start_time, 2),
     )
 

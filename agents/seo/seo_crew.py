@@ -4,7 +4,7 @@ Orchestrates all 6 SEO agents in a sequential pipeline.
 
 Pipeline: Research → Strategy → Writing → Technical → Marketing → Editing
 """
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from crewai import Agent, Task, Crew, Process
 from dotenv import load_dotenv
 import os
@@ -14,7 +14,7 @@ from datetime import datetime
 from agents.seo.research_analyst import ResearchAnalystAgent
 from agents.seo.content_strategist import ContentStrategistAgent
 from agents.seo.copywriter import CopywriterAgent
-from agents.seo.technical_seo import TechnicalSEOAgent
+from agents.seo.on_page_technical_seo import OnPageTechnicalSEOAgent
 from agents.seo.marketing_strategist import MarketingStrategistAgent
 from agents.seo.editor import EditorAgent
 
@@ -45,7 +45,13 @@ class SEOContentCrew:
     Coordinates 6 specialized agents to produce publication-ready content.
     """
     
-    def __init__(self, llm_model: str = "mixtral-8x7b-32768", use_consensus_ai: bool = False):
+    def __init__(
+        self,
+        llm_model: Any = "mixtral-8x7b-32768",
+        use_consensus_ai: bool = False,
+        track_status: bool = True,
+        include_firecrawl_tools: bool = True,
+    ):
         """
         Initialize SEO Content Crew with all agents.
         
@@ -54,13 +60,18 @@ class SEOContentCrew:
             use_consensus_ai: Whether to use Consensus AI for research
         """
         self.llm_model = llm_model
+        self.track_status = track_status
         
         # Initialize all agents
         print("Initializing SEO Content Crew...")
-        self.research_agent = ResearchAnalystAgent(llm_model, use_consensus_ai=use_consensus_ai)
+        self.research_agent = ResearchAnalystAgent(
+            llm_model,
+            use_consensus_ai=use_consensus_ai,
+            include_firecrawl_tools=include_firecrawl_tools,
+        )
         self.strategy_agent = ContentStrategistAgent(llm_model)
         self.copywriter_agent = CopywriterAgent(llm_model)
-        self.technical_agent = TechnicalSEOAgent(llm_model)
+        self.technical_agent = OnPageTechnicalSEOAgent(llm_model)
         self.marketing_agent = MarketingStrategistAgent(llm_model)
         self.editor_agent = EditorAgent(llm_model)
         
@@ -106,7 +117,7 @@ class SEOContentCrew:
 
         # Status tracking: create content record
         status_record_id = None
-        if STATUS_AVAILABLE:
+        if self.track_status and STATUS_AVAILABLE:
             try:
                 status_svc = get_status_service()
                 record = status_svc.create_content(
@@ -275,7 +286,7 @@ class SEOContentCrew:
         print(f"\n✅ Pipeline complete — final article: {len(final_output)} characters\n")
         
         # Status tracking: mark as generated → pending_review
-        if STATUS_AVAILABLE and status_record_id:
+        if self.track_status and STATUS_AVAILABLE and status_record_id:
             try:
                 status_svc = get_status_service()
                 seo_actor = actor_from_agent("seo")

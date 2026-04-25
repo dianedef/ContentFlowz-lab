@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from api.models.ai_runtime import AIRuntimeSelection
+
 
 class SafeApiKeys(BaseModel):
     """Masked API keys returned to clients."""
@@ -44,6 +46,7 @@ class RobotSettings(BaseModel):
     notifications: dict[str, bool] = Field(default_factory=dict)
     contentFrequency: ContentFrequencyConfig | None = None
     ideaPoolEnabled: bool | None = None
+    aiRuntime: AIRuntimeSelection | None = None
 
 
 class UserSettingsResponse(BaseModel):

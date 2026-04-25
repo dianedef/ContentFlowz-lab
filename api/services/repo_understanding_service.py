@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -253,17 +252,18 @@ class RepoUnderstandingService:
     async def _collect_public_site(
         self,
         manual_url: str,
+        *,
+        firecrawl_api_key: str | None,
     ) -> tuple[str, list[EvidenceItem]]:
-        firecrawl_key = os.getenv("FIRECRAWL_API_KEY")
-        if not firecrawl_key:
-            raise RuntimeError("FIRECRAWL_API_KEY is required for manual non-GitHub URLs.")
+        if not firecrawl_api_key:
+            raise RuntimeError("Firecrawl credential is required for manual non-GitHub URLs.")
 
         try:
             from firecrawl import FirecrawlApp  # type: ignore
         except Exception as exc:
             raise RuntimeError("firecrawl-py is not installed.") from exc
 
-        app = FirecrawlApp(api_key=firecrawl_key)
+        app = FirecrawlApp(api_key=firecrawl_api_key)
         evidence: list[EvidenceItem] = []
         chunks: list[str] = []
         parsed = urlparse(manual_url)
@@ -368,6 +368,7 @@ Collected content:
             user_id,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
+            route="personas.draft",
         )
         data = _extract_json_block(payload)
         data["evidence"] = [item.model_dump() for item in evidence]
@@ -377,6 +378,8 @@ Collected content:
         self,
         user_id: str,
         request: PersonaDraftRequest,
+        *,
+        firecrawl_api_key: str | None = None,
     ) -> RepoUnderstandingResult:
         if request.mode == "blank_form":
             return RepoUnderstandingResult()
@@ -423,7 +426,10 @@ Collected content:
                     raise RuntimeError(
                         "manual_url is required for manual_url source when repo_url is not public GitHub."
                     )
-                content, evidence = await self._collect_public_site(request.manual_url)
+                content, evidence = await self._collect_public_site(
+                    request.manual_url,
+                    firecrawl_api_key=firecrawl_api_key,
+                )
             return await self._synthesize_understanding(
                 user_id,
                 content=content,

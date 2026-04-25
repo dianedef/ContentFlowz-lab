@@ -1,6 +1,7 @@
 import importlib.util
 import sys
 import types
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -77,6 +78,20 @@ async def test_persona_draft_requires_openrouter_key_outside_blank_mode(monkeypa
 @pytest.mark.asyncio
 async def test_persona_draft_project_repo_success_stores_completed_result(monkeypatch):
     personas_router = _load_personas_router_module()
+    monkeypatch.setattr(
+        personas_router.ai_runtime_service,
+        "preflight_providers",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                required_provider_secrets={"openrouter": "k"},
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        personas_router.ai_runtime_service,
+        "bind_provider_env",
+        lambda _resolution: nullcontext(),
+    )
     update_mock = AsyncMock()
     monkeypatch.setattr(personas_router.job_store, "update", update_mock)
     monkeypatch.setattr(

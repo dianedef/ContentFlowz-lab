@@ -4,15 +4,15 @@ Exa AI CrewAI tools — shared across all agents.
 Wrappers around the Exa SDK that expose semantic search, similar-page
 finding, and content extraction as @tool functions for CrewAI agents.
 
-Requires: EXA_API_KEY environment variable
+Requires: an Exa secret bound in the runtime provider context.
 
 Pattern adapted from agents/newsletter/tools/content_tools.py (ContentCollector),
 generalized for use across all agents.
 """
-import os
 import logging
 from typing import Optional
 from crewai.tools import tool
+from api.services.runtime_provider_context import get_runtime_provider_secret
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +27,9 @@ except ImportError:
 def _get_client() -> "Exa":
     if not EXA_AVAILABLE:
         raise ImportError("exa-py required. Run: pip install exa-py")
-    api_key = os.getenv("EXA_API_KEY")
+    api_key = get_runtime_provider_secret("exa")
     if not api_key:
-        raise ValueError("EXA_API_KEY environment variable required")
+        raise ValueError("Runtime provider secret required for provider 'exa'")
     return Exa(api_key)
 
 

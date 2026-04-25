@@ -4,12 +4,12 @@ Firecrawl CrewAI tools — shared across all agents.
 Wrappers around the Firecrawl SDK that expose scraping, crawling,
 and web search as @tool functions for CrewAI agents.
 
-Requires: FIRECRAWL_API_KEY environment variable
+Requires: a Firecrawl secret bound in the runtime provider context.
 """
-import os
 import logging
 from typing import Optional
 from crewai.tools import tool
+from api.services.runtime_provider_context import get_runtime_provider_secret
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,9 @@ except ImportError:
 def _get_client() -> "FirecrawlApp":
     if not FIRECRAWL_AVAILABLE:
         raise ImportError("firecrawl-py required. Run: pip install firecrawl-py")
-    api_key = os.getenv("FIRECRAWL_API_KEY")
+    api_key = get_runtime_provider_secret("firecrawl")
     if not api_key:
-        raise ValueError("FIRECRAWL_API_KEY environment variable required")
+        raise ValueError("Runtime provider secret required for provider 'firecrawl'")
     return FirecrawlApp(api_key=api_key)
 
 

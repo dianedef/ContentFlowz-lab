@@ -22,11 +22,10 @@ MEM0_BACKEND = os.getenv("MEM0_BACKEND", "local")
 MEM0_LLM_MODEL = os.getenv("MEM0_LLM_MODEL", "gpt-4o-mini")
 
 # API keys
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 MEM0_API_KEY = os.getenv("MEM0_API_KEY", "")
 
 
-def get_mem0_config() -> dict:
+def get_mem0_config(*, runtime_openrouter_api_key: str | None = None) -> dict:
     """
     Build Mem0 configuration dict based on environment.
 
@@ -35,10 +34,10 @@ def get_mem0_config() -> dict:
     """
     if MEM0_BACKEND == "hosted":
         return _get_hosted_config()
-    return _get_local_config()
+    return _get_local_config(runtime_openrouter_api_key=runtime_openrouter_api_key)
 
 
-def _get_local_config() -> dict:
+def _get_local_config(*, runtime_openrouter_api_key: str | None = None) -> dict:
     """Local ChromaDB + OpenAI embeddings configuration."""
     # Ensure data directory exists
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -54,12 +53,12 @@ def _get_local_config() -> dict:
     }
 
     # LLM for fact extraction via OpenRouter
-    if OPENROUTER_API_KEY:
+    if runtime_openrouter_api_key:
         config["llm"] = {
             "provider": "openai",
             "config": {
                 "model": MEM0_LLM_MODEL,
-                "api_key": OPENROUTER_API_KEY,
+                "api_key": runtime_openrouter_api_key,
                 "openai_base_url": "https://openrouter.ai/api/v1",
             },
         }

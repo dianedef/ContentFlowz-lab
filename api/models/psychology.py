@@ -1,7 +1,7 @@
 """Pydantic models for the Psychology Engine"""
 
-from pydantic import AliasChoices, BaseModel, Field
-from typing import Optional
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from typing import Any, Optional
 from enum import Enum
 
 from api.models.user_data import PersonaCreateRequest
@@ -33,18 +33,51 @@ class ContentType(str, Enum):
 
 class CreatorEntryInput(BaseModel):
     """Raw input from the creator's weekly ritual"""
-    entry_type: EntryType = Field(default=EntryType.reflection, description="Type of entry")
+    model_config = ConfigDict(populate_by_name=True)
+
+    entry_type: EntryType = Field(
+        default=EntryType.reflection,
+        validation_alias=AliasChoices("entryType", "entry_type"),
+        serialization_alias="entryType",
+        description="Type of entry",
+    )
     content: str = Field(..., description="Free-form text from the creator")
     tags: list[str] = Field(default_factory=list, description="Optional tags")
+
+    def to_agent_payload(self) -> dict[str, Any]:
+        return {
+            "entryType": self.entry_type.value,
+            "content": self.content,
+            "tags": self.tags,
+        }
 
 
 class NarrativeSynthesisRequest(BaseModel):
     """Request to synthesize narrative from recent entries"""
-    profile_id: str = Field(..., description="Creator profile ID")
-    entry_ids: list[str] = Field(..., description="Entry IDs to synthesize")
+    profile_id: str = Field(default="default", description="Creator profile ID")
+    entries: list[CreatorEntryInput] = Field(default_factory=list, description="Raw ritual entries")
+    entry_ids: list[str] = Field(default_factory=list, description="Legacy ritual entry payload")
     current_voice: Optional[dict] = Field(None, description="Current voice profile")
     current_positioning: Optional[dict] = Field(None, description="Current positioning")
     chapter_title: Optional[str] = Field(None, description="Current chapter title")
+
+    def to_entry_payloads(self) -> list[dict[str, Any]]:
+        if self.entries:
+            return [
+                entry.to_agent_payload()
+                for entry in self.entries
+                if entry.content.strip()
+            ]
+
+        return [
+            {
+                "entryType": EntryType.reflection.value,
+                "content": str(entry_id),
+                "tags": [],
+            }
+            for entry_id in self.entry_ids
+            if str(entry_id).strip()
+        ]
 
 
 class NarrativeSynthesisResult(BaseModel):
@@ -80,7 +113,7 @@ class PersonaInput(BaseModel):
 
 class PersonaRefinementRequest(BaseModel):
     """Request to refine a persona using analytics or behavioral data"""
-    persona_id: str = Field(..., description="Persona ID to refine")
+    persona_id: str | None = Field(default=None, description="Persona ID to refine")
     current_persona: PersonaCreateRequest = Field(
         ...,
         validation_alias=AliasChoices("current_persona", "persona"),
@@ -110,10 +143,10 @@ class AngleSuggestion(BaseModel):
 
 class AngleGenerationRequest(BaseModel):
     """Request to generate content angles by crossing creator + customer data"""
-    profile_id: str = Field(..., description="Creator profile ID")
-    persona_id: str = Field(..., description="Target customer persona ID")
-    creator_voice: dict = Field(..., description="Creator's voice profile")
-    creator_positioning: dict = Field(..., description="Creator's positioning")
+    profile_id: str | None = Field(default=None, description="Creator profile ID")
+    persona_id: str | None = Field(default=None, description="Target customer persona ID")
+    creator_voice: dict = Field(default_factory=dict, description="Creator's voice profile")
+    creator_positioning: dict = Field(default_factory=dict, description="Creator's positioning")
     narrative_summary: Optional[str] = Field(None, description="Current narrative summary")
     persona_data: PersonaCreateRequest = Field(..., description="Customer persona data")
     content_type: Optional[ContentType] = Field(None, description="Limit to specific content type")

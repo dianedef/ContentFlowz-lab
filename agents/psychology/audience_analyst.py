@@ -4,6 +4,8 @@ This agent takes existing persona definitions and enriches them with
 analytics data, content performance correlations, and gap analysis.
 """
 
+from typing import Any
+
 from crewai import Agent, Task, Crew
 from agents.shared.prompt_loader import load_prompt
 from agents.psychology.tools.persona_tools import (
@@ -17,7 +19,7 @@ from agents.psychology.tools.analytics_tools import (
 )
 
 
-def _build_agent() -> Agent:
+def _build_agent(llm: Any | None = None) -> Agent:
     p = load_prompt("psychology", "audience_analyst")
     return Agent(
         role=p["role"],
@@ -30,6 +32,7 @@ def _build_agent() -> Agent:
             update_persona_confidence,
             correlate_content_performance,
         ],
+        llm=llm,
         verbose=False,
         allow_delegation=True,
     )
@@ -39,6 +42,7 @@ def run_persona_refinement(
     persona: dict,
     analytics_data: dict | None = None,
     content_performance: list[dict] | None = None,
+    llm: Any | None = None,
 ) -> dict:
     """Run the Audience Analyst crew to refine a persona.
 
@@ -52,7 +56,7 @@ def run_persona_refinement(
     """
     import json
 
-    agent = _build_agent()
+    agent = _build_agent(llm=llm)
 
     persona_json = json.dumps(persona)
     analytics_json = json.dumps(analytics_data or {})

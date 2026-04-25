@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 import asyncio
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -20,11 +21,33 @@ from api.models.user_data import (
     PersonaUpdateRequest,
 )
 from api.services.job_store import job_store
+from api.services.ai_runtime_service import AIRuntimeServiceError, ai_runtime_service
 from api.services.repo_understanding_service import repo_understanding_service
-from api.services.user_llm_service import user_llm_service
+from api.services.user_llm_service import user_llm_service  # backward-compatible test hook
 from api.services.user_data_store import user_data_store
 
 router = APIRouter(prefix="/api/personas", tags=["Personas"])
+
+
+def _is_github_url(url: str | None) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return parsed.netloc.lower() in {"github.com", "www.github.com"}
+
+
+def _required_persona_providers(request: PersonaDraftRequest) -> list[str]:
+    if request.mode == "blank_form":
+        return []
+    if request.repo_source == "manual_url" and not _is_github_url(request.repo_url):
+        return ["openrouter", "firecrawl"]
+    return ["openrouter"]
+
+
+def _raise_runtime_http(exc: Exception) -> None:
+    if isinstance(exc, AIRuntimeServiceError):
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[PersonaResponse], summary="List personas")
@@ -85,21 +108,35 @@ async def _run_persona_draft_job(
     request: PersonaDraftRequest,
 ) -> None:
     try:
+        required_providers = _required_persona_providers(request)
+        resolution = None
+        if required_providers:
+            resolution = await ai_runtime_service.preflight_providers(
+                user_id=user_id,
+                route="personas.draft",
+                required_providers=required_providers,
+            )
+
         await job_store.update(
             job_id,
             status="running",
             progress=20,
             message="Collecting repository understanding.",
         )
-        understanding = await repo_understanding_service.understand(user_id, request)
+        if resolution:
+            with ai_runtime_service.bind_provider_env(resolution):
+                understanding = await repo_understanding_service.understand(
+                    user_id,
+                    request,
+                    firecrawl_api_key=resolution.required_provider_secrets.get("firecrawl"),
+                )
+        else:
+            understanding = await repo_understanding_service.understand(user_id, request)
         await job_store.update(
             job_id,
             progress=65,
             message="Synthesizing persona draft.",
         )
-
-        if request.mode != "blank_form":
-            await user_llm_service.get_openrouter_key(user_id)
 
         creator_profile = request.existing_creator_profile
         if creator_profile is None and request.project_id:
@@ -152,11 +189,16 @@ async def create_persona_draft(
     request: PersonaDraftRequest,
     current_user: CurrentUser = Depends(require_current_user),
 ) -> PersonaDraftJobResponse:
-    if request.mode != "blank_form":
+    required_providers = _required_persona_providers(request)
+    if required_providers:
         try:
-            await user_llm_service.get_openrouter_key(current_user.user_id)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
+            await ai_runtime_service.preflight_providers(
+                user_id=current_user.user_id,
+                route="personas.draft",
+                required_providers=required_providers,
+            )
+        except Exception as exc:
+            _raise_runtime_http(exc)
 
     job_id = str(uuid.uuid4())
     await job_store.upsert(

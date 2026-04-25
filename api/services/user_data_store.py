@@ -41,6 +41,21 @@ def _json_dump(raw: Any) -> str | None:
     return json.dumps(raw)
 
 
+def _deep_merge_dict(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge dict updates while preserving unrelated keys."""
+    merged = dict(base)
+    for key, value in updates.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, dict)
+        ):
+            merged[key] = _deep_merge_dict(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def _mask_api_keys(api_keys: dict[str, Any] | None) -> dict[str, Any] | None:
     if not api_keys:
         return None
@@ -182,8 +197,16 @@ class UserDataStore:
             params.append(_json_dump(updates["dashboardLayout"]))
 
         if "robotSettings" in updates:
+            incoming_robot_settings = updates["robotSettings"]
+            if isinstance(incoming_robot_settings, dict):
+                existing_robot_settings = current.get("robotSettings")
+                if isinstance(existing_robot_settings, dict):
+                    incoming_robot_settings = _deep_merge_dict(
+                        existing_robot_settings,
+                        incoming_robot_settings,
+                    )
             update_fields.append("robotSettings = ?")
-            params.append(_json_dump(updates["robotSettings"]))
+            params.append(_json_dump(incoming_robot_settings))
 
         params.append(user_id)
         await self.db_client.execute(
@@ -191,6 +214,28 @@ class UserDataStore:
             params,
         )
         return await self.get_user_settings(user_id)
+
+    async def get_effective_ai_runtime_mode(self, user_id: str) -> str:
+        """Resolve persisted runtime mode, defaulting to BYOK."""
+        settings = await self.get_user_settings(user_id)
+        robot_settings = settings.get("robotSettings")
+        if not isinstance(robot_settings, dict):
+            return "byok"
+        ai_runtime = robot_settings.get("aiRuntime")
+        if not isinstance(ai_runtime, dict):
+            return "byok"
+        mode = ai_runtime.get("mode")
+        if mode in {"byok", "platform"}:
+            return mode
+        return "byok"
+
+    async def set_ai_runtime_mode(self, user_id: str, mode: str) -> dict[str, Any]:
+        if mode not in {"byok", "platform"}:
+            raise ValueError(f"Unsupported runtime mode '{mode}'")
+        return await self.update_user_settings(
+            user_id,
+            {"robotSettings": {"aiRuntime": {"mode": mode}}},
+        )
 
     async def ensure_user_settings_table(self) -> None:
         """Create UserSettings table if it doesn't exist (idempotent)."""

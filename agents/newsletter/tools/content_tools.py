@@ -6,7 +6,7 @@ Uses Exa AI for web research and content discovery.
 
 from typing import List, Dict, Any, Optional
 from crewai.tools import tool
-import os
+from api.services.runtime_provider_context import get_runtime_provider_secret
 
 # Exa AI integration (already in requirements.txt)
 try:
@@ -22,9 +22,9 @@ class ContentCollector:
     """
 
     def __init__(self):
-        api_key = os.getenv("EXA_API_KEY")
+        api_key = get_runtime_provider_secret("exa")
         if not api_key:
-            raise ValueError("EXA_API_KEY environment variable required")
+            raise ValueError("Runtime provider secret required for provider 'exa'")
 
         if not EXA_AVAILABLE:
             raise ImportError("exa-py required. Run: pip install exa-py")

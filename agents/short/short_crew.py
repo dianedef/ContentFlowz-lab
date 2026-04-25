@@ -5,7 +5,7 @@ including hook, timed script, hashtags, and visual notes.
 """
 
 import json
-from typing import Optional
+from typing import Any, Optional
 from crewai import Agent, Task, Crew
 from agents.shared.prompt_loader import load_prompt
 from status.audit import actor_from_agent
@@ -28,7 +28,7 @@ PLATFORM_CONSTRAINTS = {
 class ShortContentCrew:
     """Crew for generating short-form video content packages."""
 
-    def __init__(self, llm_model: str = "groq/mixtral-8x7b-32768"):
+    def __init__(self, llm_model: Any = "groq/mixtral-8x7b-32768"):
         self.llm_model = llm_model
 
     def _build_agent(self) -> Agent:
@@ -38,6 +38,7 @@ class ShortContentCrew:
             goal=p["goal"],
             backstory=p["backstory"],
             tools=[],
+            llm=self.llm_model,
             verbose=False,
         )
 
@@ -48,6 +49,7 @@ class ShortContentCrew:
         platform: str = "tiktok",
         max_duration: int = 60,
         project_id: Optional[str] = None,
+        create_content_record: bool = True,
     ) -> dict:
         """Generate a complete short-form content package.
 
@@ -66,7 +68,7 @@ class ShortContentCrew:
 
         # Create content record if status service available
         record_id = None
-        if STATUS_AVAILABLE:
+        if STATUS_AVAILABLE and create_content_record:
             try:
                 svc = get_status_service()
                 record = svc.create_content(
@@ -135,7 +137,7 @@ class ShortContentCrew:
             }
 
         # Update content record
-        if STATUS_AVAILABLE and record_id:
+        if STATUS_AVAILABLE and create_content_record and record_id:
             try:
                 svc = get_status_service()
                 body = parsed.get("script", raw)

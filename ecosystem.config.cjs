@@ -5,7 +5,7 @@ module.exports = {
     name: "contentflow_lab",
     cwd,
     script: "bash",
-    args: ["-lc", `cd "${cwd}" && export PORT=3000 && flox activate -- doppler run --project winflowz --config prd -- bash -lc './run_seo_tools.sh ./.venv/bin/python3 main.py'`],
+    args: ["-lc", `cd "${cwd}" && export PORT=3000 && flox activate -- doppler run --project contentflow_app --config prd -- bash -lc './run_seo_tools.sh ./.venv/bin/python3 main.py'`],
     env: {
       PORT: 3000
     },

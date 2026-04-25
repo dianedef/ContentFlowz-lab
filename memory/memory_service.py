@@ -47,13 +47,13 @@ class MemoryService:
     to read/write the project brain.
     """
 
-    def __init__(self):
+    def __init__(self, *, runtime_openrouter_api_key: str | None = None):
         if not MEM0_AVAILABLE:
             raise ImportError(
                 "mem0ai is not installed. Run: pip install mem0ai"
             )
 
-        config = get_mem0_config()
+        config = get_mem0_config(runtime_openrouter_api_key=runtime_openrouter_api_key)
         if MEM0_BACKEND == "hosted":
             self._client = MemoryClient(api_key=config["api_key"])
             self._is_hosted = True
@@ -366,3 +366,8 @@ def get_memory_service() -> MemoryService:
     if _service_instance is None:
         _service_instance = MemoryService()
     return _service_instance
+
+
+def build_runtime_memory_service(*, openrouter_api_key: str | None) -> MemoryService:
+    """Create a non-singleton runtime-scoped memory service."""
+    return MemoryService(runtime_openrouter_api_key=openrouter_api_key)

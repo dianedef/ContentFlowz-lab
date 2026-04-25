@@ -4,6 +4,8 @@ This agent reads raw ritual entries, detects patterns and evolution,
 and produces narrative updates that the creator reviews before merging.
 """
 
+from typing import Any
+
 from crewai import Agent, Task, Crew
 from agents.shared.prompt_loader import load_prompt
 from agents.psychology.tools.narrative_tools import (
@@ -14,7 +16,7 @@ from agents.psychology.tools.narrative_tools import (
 )
 
 
-def _build_agent() -> Agent:
+def _build_agent(llm: Any | None = None) -> Agent:
     p = load_prompt("psychology", "creator_psychologist")
     return Agent(
         role=p["role"],
@@ -26,6 +28,7 @@ def _build_agent() -> Agent:
             detect_chapter_transition,
             generate_narrative_update,
         ],
+        llm=llm,
         verbose=False,
     )
 
@@ -36,6 +39,7 @@ def run_narrative_synthesis(
     current_voice: dict | None = None,
     current_positioning: dict | None = None,
     chapter_title: str | None = None,
+    llm: Any | None = None,
 ) -> dict:
     """Run the Creator Psychologist crew to synthesize narrative from entries.
 
@@ -51,7 +55,7 @@ def run_narrative_synthesis(
     """
     import json
 
-    agent = _build_agent()
+    agent = _build_agent(llm=llm)
 
     entries_json = json.dumps(entries)
     voice_json = json.dumps(current_voice or {})

@@ -48,6 +48,13 @@ def _github_scopes() -> str:
     return os.getenv("GITHUB_OAUTH_SCOPES", GITHUB_SCOPE)
 
 
+def _github_redirect_uri(request: Request) -> str:
+    override = (os.getenv("GITHUB_OAUTH_REDIRECT_URI") or "").strip()
+    if override:
+        return override
+    return str(request.url_for("github_oauth_callback"))
+
+
 @router.get("/connect")
 async def github_connect(
     request: Request,
@@ -56,14 +63,13 @@ async def github_connect(
     """Return the GitHub authorization URL for this user."""
     client_id = _github_client_id()
     state = await user_data_store.create_github_oauth_state(current_user.user_id)
-    callback = request.url_for("github_oauth_callback")
     return {
         "connect_url": (
             f"{GITHUB_OAUTH_AUTHORIZE_URL}"
             f"?client_id={client_id}"
             f"&scope={_github_scopes()}"
             f"&state={state}"
-            f"&redirect_uri={callback}"
+            f"&redirect_uri={_github_redirect_uri(request)}"
         ),
     }
 

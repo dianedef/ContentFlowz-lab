@@ -6,7 +6,7 @@ Pipeline: Two agents work together:
 """
 
 import json
-from typing import Optional
+from typing import Any, Optional
 from crewai import Agent, Task, Crew, Process
 from agents.shared.prompt_loader import load_prompt
 from status.audit import actor_from_agent
@@ -29,7 +29,7 @@ PLATFORM_SPECS = {
 class SocialPostCrew:
     """Crew for generating platform-adapted social media posts."""
 
-    def __init__(self, llm_model: str = "groq/mixtral-8x7b-32768"):
+    def __init__(self, llm_model: Any = "groq/mixtral-8x7b-32768"):
         self.llm_model = llm_model
 
     def _build_adapter_agent(self) -> Agent:
@@ -39,6 +39,7 @@ class SocialPostCrew:
             goal=p["goal"],
             backstory=p["backstory"],
             tools=[],
+            llm=self.llm_model,
             verbose=False,
         )
 
@@ -49,6 +50,7 @@ class SocialPostCrew:
             goal=p["goal"],
             backstory=p["backstory"],
             tools=[],
+            llm=self.llm_model,
             verbose=False,
         )
 
@@ -58,6 +60,7 @@ class SocialPostCrew:
         creator_voice: dict,
         platforms: list[str] | None = None,
         project_id: Optional[str] = None,
+        create_content_record: bool = True,
     ) -> dict:
         """Generate platform-adapted social media posts.
 
@@ -75,7 +78,7 @@ class SocialPostCrew:
 
         # Create content record
         record_id = None
-        if STATUS_AVAILABLE:
+        if STATUS_AVAILABLE and create_content_record:
             try:
                 svc = get_status_service()
                 record = svc.create_content(
@@ -159,7 +162,7 @@ class SocialPostCrew:
             }
 
         # Update content record
-        if STATUS_AVAILABLE and record_id:
+        if STATUS_AVAILABLE and create_content_record and record_id:
             try:
                 svc = get_status_service()
                 body = json.dumps(parsed.get("posts", []), indent=2)

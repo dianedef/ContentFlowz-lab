@@ -1,5 +1,7 @@
 """Pydantic models for Research endpoints"""
 
+from urllib.parse import urlparse
+
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional
 
@@ -7,11 +9,18 @@ from typing import Optional
 class CompetitorAnalysisRequest(BaseModel):
     """Request for competitor analysis"""
     keywords: list[str] = Field(
-        ...,
-        min_length=1,
+        default_factory=list,
         max_length=10,
         description="Keywords to analyze (1-10)",
         examples=[["SEO tools", "content marketing"]]
+    )
+    target_url: Optional[HttpUrl] = Field(
+        default=None,
+        description="Primary site URL from the Flutter research screen",
+    )
+    competitors: list[str] = Field(
+        default_factory=list,
+        description="Competitor URLs or domains from the Flutter research screen",
     )
     num_competitors: int = Field(
         default=5,
@@ -27,6 +36,28 @@ class CompetitorAnalysisRequest(BaseModel):
         default=False,
         description="Use Consensus AI for scientific/academic research"
     )
+
+    def normalized_keywords(self) -> list[str]:
+        return [
+            keyword.strip()
+            for keyword in self.keywords
+            if isinstance(keyword, str) and keyword.strip()
+        ]
+
+    def normalized_competitor_domains(self) -> list[str]:
+        domains: list[str] = []
+        for value in self.competitors:
+            if not isinstance(value, str):
+                continue
+            raw = value.strip()
+            if not raw:
+                continue
+            parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+            host = parsed.netloc or parsed.path
+            host = host.replace("www.", "").strip().strip("/")
+            if host:
+                domains.append(host)
+        return domains[: self.num_competitors]
 
 
 class CompetitorInfo(BaseModel):

@@ -69,18 +69,32 @@ def get_newsletter_config(overrides: Optional[Dict[str, Any]] = None) -> Dict[st
     return config
 
 
-def validate_config() -> Dict[str, bool]:
+def validate_config(
+    *,
+    openrouter_configured: Optional[bool] = None,
+    exa_configured: Optional[bool] = None,
+) -> Dict[str, bool]:
     """
     Validate that required configuration is present.
 
     Returns:
         Dictionary of config keys and their validity
     """
+    resolved_openrouter = (
+        bool(os.getenv("OPENROUTER_API_KEY"))
+        if openrouter_configured is None
+        else openrouter_configured
+    )
+    resolved_exa = (
+        bool(os.getenv("EXA_API_KEY"))
+        if exa_configured is None
+        else exa_configured
+    )
     checks = {
         "sendgrid_configured": bool(os.getenv("SENDGRID_API_KEY")),
         "composio_configured": bool(os.getenv("COMPOSIO_API_KEY")),
-        "exa_configured": bool(os.getenv("EXA_API_KEY")),
-        "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY")),
+        "exa_configured": resolved_exa,
+        "openrouter_configured": resolved_openrouter,
         "imap_configured": bool(
             IMAP_DEFAULTS["email"] and IMAP_DEFAULTS["app_password"]
         ),
