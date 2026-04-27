@@ -129,10 +129,22 @@ async def lifespan(app: FastAPI):
             await user_data_store.ensure_work_domain_table()
             await user_data_store.ensure_github_integration_table()
             await user_data_store.ensure_github_oauth_state_table()
+            rotation = await user_data_store.rotate_legacy_github_tokens()
             print(
                 "✅ UserSettings + CreatorProfile + CustomerPersona + "
                 "AffiliateLink + ActivityLog + WorkDomain tables ensured"
             )
+            if bool(rotation.get("key_configured")):
+                print(
+                    "✅ GitHub token migration scanned "
+                    f"{rotation.get('scanned', 0)} rows; rotated "
+                    f"{rotation.get('rotated', 0)}, skipped {rotation.get('skipped', 0)}"
+                )
+            else:
+                print(
+                    "ℹ️ GitHub token migration skipped "
+                    "(USER_SECRETS_MASTER_KEY not configured)"
+                )
     except Exception as e:
         print(f"⚠ AffiliateLink migration failed (non-critical): {e}")
 
@@ -280,10 +292,25 @@ app = FastAPI(
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple in-process rate limiter. Limits per IP per window."""
 
-    def __init__(self, app, requests_per_minute: int = 60):
+    def __init__(
+        self,
+        app,
+        requests_per_minute: int = 60,
+        max_clients: int = 10_000,
+    ):
         super().__init__(app)
         self.rpm = requests_per_minute
+        self.max_clients = max_clients
+        self.window_seconds = 60.0
         self._hits: dict[str, list[float]] = {}
+
+    def _prune(self, now: float) -> None:
+        for tracked_ip, tracked_hits in list(self._hits.items()):
+            fresh_hits = [t for t in tracked_hits if now - t < self.window_seconds]
+            if fresh_hits:
+                self._hits[tracked_ip] = fresh_hits
+            else:
+                self._hits.pop(tracked_ip, None)
 
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for health checks
@@ -292,11 +319,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
-        window = 60.0
+        self._prune(now)
+
+        if ip not in self._hits and len(self._hits) >= self.max_clients:
+            return JSONResponse(
+                status_code=429,
+                content={"error": "Too many active clients"},
+                headers={"Retry-After": "60"},
+            )
 
         hits = self._hits.get(ip, [])
-        # Prune old entries
-        hits = [t for t in hits if now - t < window]
         if len(hits) >= self.rpm:
             return JSONResponse(
                 status_code=429,
@@ -309,7 +341,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=120,
+    max_clients=10_000,
+)
 
 # CORS - Allow Next.js frontend to call API
 # Note: FastAPI CORS middleware doesn't support wildcard subdomains (*.vercel.app)

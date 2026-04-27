@@ -36,6 +36,7 @@ class FeedbackTextCreateRequest(BaseModel):
 class FeedbackAudioUploadUrlRequest(BaseModel):
     mimeType: str = Field(..., min_length=1, max_length=128)
     fileName: str = Field(..., min_length=1, max_length=255)
+    fileSizeBytes: int | None = Field(default=None, gt=0, le=20 * 1024 * 1024)
 
 
 class FeedbackAudioUploadUrlResponse(BaseModel):
@@ -70,6 +71,10 @@ class FeedbackEntryResponse(BaseModel):
 
 class FeedbackAdminListResponse(BaseModel):
     items: list[FeedbackEntryResponse] = Field(default_factory=list)
+
+
+class FeedbackAdminCapabilityResponse(BaseModel):
+    isAdmin: bool
 
 
 class FeedbackReviewResponse(BaseModel):

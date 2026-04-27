@@ -55,6 +55,10 @@ def _github_redirect_uri(request: Request) -> str:
     return str(request.url_for("github_oauth_callback"))
 
 
+def _raise_store_error(exc: RuntimeError) -> None:
+    raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/connect")
 async def github_connect(
     request: Request,
@@ -62,7 +66,10 @@ async def github_connect(
 ) -> dict[str, str]:
     """Return the GitHub authorization URL for this user."""
     client_id = _github_client_id()
-    state = await user_data_store.create_github_oauth_state(current_user.user_id)
+    try:
+        state = await user_data_store.create_github_oauth_state(current_user.user_id)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     return {
         "connect_url": (
             f"{GITHUB_OAUTH_AUTHORIZE_URL}"
@@ -80,7 +87,10 @@ async def github_callback(
     state: str = Query(...),
 ) -> dict[str, Any]:
     """Exchange OAuth code for token and store the GitHub connection."""
-    user_id = await user_data_store.consume_github_oauth_state(state)
+    try:
+        user_id = await user_data_store.consume_github_oauth_state(state)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     if not user_id:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state.")
 
@@ -128,13 +138,16 @@ async def github_callback(
             )
 
         user_payload = user_resp.json()
-        await user_data_store.upsert_github_integration(
-            user_id=user_id,
-            token=access_token,
-            github_user_id=(user_payload.get("id") and str(user_payload["id"])),
-            github_username=user_payload.get("login"),
-            scopes=scopes_list,
-        )
+        try:
+            await user_data_store.upsert_github_integration(
+                user_id=user_id,
+                token=access_token,
+                github_user_id=(user_payload.get("id") and str(user_payload["id"])),
+                github_username=user_payload.get("login"),
+                scopes=scopes_list,
+            )
+        except RuntimeError as exc:
+            _raise_store_error(exc)
 
         return {
             "connected": True,
@@ -150,7 +163,10 @@ async def github_status(
     current_user: CurrentUser = Depends(require_current_user),
 ) -> dict[str, Any]:
     """Return whether GitHub is connected and its basic metadata."""
-    integration = await user_data_store.get_github_integration(current_user.user_id)
+    try:
+        integration = await user_data_store.get_github_integration(current_user.user_id)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     if not integration:
         return {"connected": False}
 
@@ -167,7 +183,10 @@ async def github_disconnect(
     current_user: CurrentUser = Depends(require_current_user),
 ) -> dict[str, Any]:
     """Disconnect GitHub integration for current user."""
-    await user_data_store.delete_github_integration(current_user.user_id)
+    try:
+        await user_data_store.delete_github_integration(current_user.user_id)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     return {"connected": False}
 
 
@@ -179,7 +198,10 @@ async def github_repos(
     page: int = 1,
 ) -> dict[str, Any]:
     """List repos visible with the current GitHub token."""
-    integration = await user_data_store.get_github_integration(current_user.user_id)
+    try:
+        integration = await user_data_store.get_github_integration(current_user.user_id)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     if not integration:
         raise HTTPException(status_code=401, detail="GitHub is not connected.")
 
@@ -236,7 +258,10 @@ async def github_repo_tree(
     path: str = Query(""),
 ) -> dict[str, Any]:
     """Browse repository folders from the current authenticated GitHub account."""
-    integration = await user_data_store.get_github_integration(current_user.user_id)
+    try:
+        integration = await user_data_store.get_github_integration(current_user.user_id)
+    except RuntimeError as exc:
+        _raise_store_error(exc)
     if not integration:
         raise HTTPException(status_code=401, detail="GitHub is not connected.")
 

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import string
 import uuid
 from datetime import datetime
 from typing import Any
 
+from api.services.crypto import get_crypto
 from utils.libsql_async import create_client
 
 
@@ -88,11 +91,57 @@ class UserDataStore:
 
     def __init__(self) -> None:
         self.db_client = None
+        self._oauth_state_lock = asyncio.Lock()
         if os.getenv("TURSO_DATABASE_URL") and os.getenv("TURSO_AUTH_TOKEN"):
             self.db_client = create_client(
                 url=os.getenv("TURSO_DATABASE_URL"),
                 auth_token=os.getenv("TURSO_AUTH_TOKEN"),
             )
+
+    @staticmethod
+    def _github_token_encryption_enabled() -> bool:
+        return bool((os.getenv("USER_SECRETS_MASTER_KEY") or "").strip())
+
+    def _require_github_token_encryption(self) -> None:
+        if not self._github_token_encryption_enabled():
+            raise RuntimeError(
+                "USER_SECRETS_MASTER_KEY is required for GitHub integration operations."
+            )
+
+    @staticmethod
+    def _looks_like_plaintext_github_token(token: str) -> bool:
+        normalized = token.strip()
+        if not normalized or any(ch.isspace() for ch in normalized):
+            return False
+        lowered = normalized.lower()
+        if lowered.startswith(
+            (
+                "ghp_",
+                "gho_",
+                "ghu_",
+                "ghs_",
+                "ghr_",
+                "github_pat_",
+            )
+        ):
+            return True
+        return len(normalized) == 40 and all(ch in string.hexdigits for ch in normalized)
+
+    def _encrypt_github_token(self, token: str) -> str:
+        if not token:
+            return token
+        self._require_github_token_encryption()
+        return get_crypto().encrypt(token)
+
+    def _decrypt_github_token(self, token: str) -> str:
+        if not token:
+            return token
+        self._require_github_token_encryption()
+        try:
+            return get_crypto().decrypt(token)
+        except RuntimeError:
+            # Backward-compatibility for legacy plaintext rows.
+            return token
 
     def _ensure_connected(self) -> None:
         if not self.db_client:
@@ -356,12 +405,74 @@ class UserDataStore:
             """
         )
 
+    async def rotate_legacy_github_tokens(self) -> dict[str, int | bool]:
+        """
+        Re-encrypt legacy plaintext GitHub tokens when a master key is configured.
+
+        Safe + idempotent behavior:
+        - Encrypted rows are skipped.
+        - Unknown non-decryptable formats are skipped to avoid data corruption.
+        - Plaintext rows are conditionally updated using token match.
+        """
+        self._ensure_connected()
+        if not self._github_token_encryption_enabled():
+            return {
+                "key_configured": False,
+                "scanned": 0,
+                "rotated": 0,
+                "skipped": 0,
+            }
+
+        crypto = get_crypto()
+        rs = await self.db_client.execute(
+            "SELECT userId, token FROM UserGithubIntegration"
+        )
+        rows = list(rs.rows)
+        now = int(datetime.now().timestamp())
+        rotated = 0
+        skipped = 0
+
+        for row in rows:
+            if not row or len(row) < 2:
+                continue
+            user_id = str(row[0])
+            token_raw = row[1]
+            if token_raw is None:
+                continue
+
+            token = str(token_raw)
+            try:
+                crypto.decrypt(token)
+                continue
+            except RuntimeError:
+                if not self._looks_like_plaintext_github_token(token):
+                    skipped += 1
+                    continue
+
+            encrypted_token = crypto.encrypt(token)
+            await self.db_client.execute(
+                """
+                UPDATE UserGithubIntegration
+                SET token = ?, updatedAt = ?
+                WHERE userId = ? AND token = ?
+                """,
+                [encrypted_token, now, user_id, token],
+            )
+            rotated += 1
+
+        return {
+            "key_configured": True,
+            "scanned": len(rows),
+            "rotated": rotated,
+            "skipped": skipped,
+        }
+
     def _github_integration_from_row(self, row: tuple[Any, ...]) -> dict[str, Any] | None:
         if not row:
             return None
         return {
             "userId": row[0],
-            "token": row[1],
+            "token": self._decrypt_github_token(str(row[1])) if row[1] else None,
             "githubUserId": row[2],
             "githubUsername": row[3],
             "scopes": _json_load(row[4], None),
@@ -376,6 +487,7 @@ class UserDataStore:
 
     async def get_github_integration(self, user_id: str) -> dict[str, Any] | None:
         self._ensure_connected()
+        self._require_github_token_encryption()
         rs = await self.db_client.execute(
             """
             SELECT userId, token, githubUserId, githubUsername, scopes, createdAt, updatedAt
@@ -399,7 +511,9 @@ class UserDataStore:
         scopes: list[str] | None = None,
     ) -> dict[str, Any]:
         self._ensure_connected()
+        self._require_github_token_encryption()
         now = int(datetime.now().timestamp())
+        encrypted_token = self._encrypt_github_token(token)
 
         if await self.get_github_integration(user_id):
             await self.db_client.execute(
@@ -409,7 +523,7 @@ class UserDataStore:
                 WHERE userId = ?
                 """,
                 [
-                    token,
+                    encrypted_token,
                     github_user_id,
                     github_username,
                     _json_dump(scopes),
@@ -426,7 +540,7 @@ class UserDataStore:
                 """,
                 [
                     user_id,
-                    token,
+                    encrypted_token,
                     github_user_id,
                     github_username,
                     _json_dump(scopes),
@@ -442,6 +556,7 @@ class UserDataStore:
 
     async def delete_github_integration(self, user_id: str) -> None:
         self._ensure_connected()
+        self._require_github_token_encryption()
         await self.db_client.execute(
             "DELETE FROM UserGithubIntegration WHERE userId = ?",
             [user_id],
@@ -449,6 +564,7 @@ class UserDataStore:
 
     async def create_github_oauth_state(self, user_id: str, ttl_seconds: int = 600) -> str:
         self._ensure_connected()
+        self._require_github_token_encryption()
         import secrets
 
         state = secrets.token_urlsafe(32)
@@ -464,31 +580,49 @@ class UserDataStore:
 
     async def consume_github_oauth_state(self, state: str) -> str | None:
         self._ensure_connected()
+        self._require_github_token_encryption()
         now = int(datetime.now().timestamp())
-        rs = await self.db_client.execute(
-            """
-            SELECT userId, used
-            FROM GithubOAuthState
-            WHERE state = ? AND expiresAt >= ?
-            LIMIT 1
-            """,
-            [state, now],
-        )
-
-        user = self._github_state_from_row(rs.rows[0]) if rs.rows else None
-        if not user:
+        try:
+            rs = await self.db_client.execute(
+                """
+                UPDATE GithubOAuthState
+                SET used = 1
+                WHERE state = ? AND expiresAt >= ? AND used = 0
+                RETURNING userId
+                """,
+                [state, now],
+            )
+            if rs.rows:
+                return str(rs.rows[0][0])
             return None
+        except Exception as exc:
+            message = str(exc).upper()
+            if "RETURNING" not in message and "SQL_PARSE_ERROR" not in message:
+                raise
 
-        user_id, used = user
-        if used:
-            return None
+        async with self._oauth_state_lock:
+            rs = await self.db_client.execute(
+                """
+                SELECT userId, used
+                FROM GithubOAuthState
+                WHERE state = ? AND expiresAt >= ?
+                LIMIT 1
+                """,
+                [state, now],
+            )
+            user = self._github_state_from_row(rs.rows[0]) if rs.rows else None
+            if not user:
+                return None
 
-        await self.db_client.execute(
-            "UPDATE GithubOAuthState SET used = 1 WHERE state = ?",
-            [state],
-        )
+            user_id, used = user
+            if used:
+                return None
 
-        return user_id
+            await self.db_client.execute(
+                "UPDATE GithubOAuthState SET used = 1 WHERE state = ? AND used = 0",
+                [state],
+            )
+            return user_id
 
     async def get_creator_profile(self, user_id: str, project_id: str | None = None) -> dict[str, Any] | None:
         self._ensure_connected()

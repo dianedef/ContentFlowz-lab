@@ -66,6 +66,13 @@ class FeedbackStorageService:
         except ValueError:
             return 900
 
+    def _max_upload_bytes(self) -> int:
+        try:
+            value = int(os.getenv("FEEDBACK_MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
+        except ValueError:
+            value = 5 * 1024 * 1024
+        return max(1024, value)
+
     def _playback_ttl_seconds(self) -> int:
         try:
             return int(os.getenv("FEEDBACK_PLAYBACK_TTL_SECONDS", "300"))
@@ -112,6 +119,7 @@ class FeedbackStorageService:
         storage_id: str,
         ttl_seconds: int,
         mime_type: str | None = None,
+        max_bytes: int | None = None,
     ) -> str:
         payload: dict[str, Any] = {
             "action": action,
@@ -120,6 +128,8 @@ class FeedbackStorageService:
         }
         if mime_type:
             payload["mimeType"] = mime_type
+        if max_bytes:
+            payload["maxBytes"] = int(max_bytes)
         encoded_payload = _b64url_encode(
             json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
         )
@@ -152,12 +162,20 @@ class FeedbackStorageService:
             raise FeedbackStorageError("Feedback token expired.")
         return payload
 
-    def create_upload_token(self, storage_id: str, mime_type: str) -> str:
+    def create_upload_token(
+        self,
+        storage_id: str,
+        mime_type: str,
+        *,
+        max_bytes: int | None = None,
+    ) -> str:
+        effective_max_bytes = max_bytes if max_bytes is not None else self._max_upload_bytes()
         return self.issue_token(
             action="upload",
             storage_id=storage_id,
             ttl_seconds=self._upload_ttl_seconds(),
             mime_type=mime_type,
+            max_bytes=effective_max_bytes,
         )
 
     def create_playback_token(self, storage_id: str) -> str:

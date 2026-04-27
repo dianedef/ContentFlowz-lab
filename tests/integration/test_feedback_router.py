@@ -124,7 +124,70 @@ def test_get_audio_upload_url_returns_backend_proxy():
     create_upload_token.assert_called_once_with(
         "feedback/audio/2026/04/19/test.wav",
         "audio/wav",
+        max_bytes=None,
     )
+
+
+def test_get_audio_upload_url_forwards_requested_size_limit():
+    client = _build_client()
+
+    with (
+        patch.object(
+            feedback_module.feedback_storage_service,
+            "generate_storage_id",
+            return_value="feedback/audio/2026/04/19/test.wav",
+        ),
+        patch.object(
+            feedback_module.feedback_storage_service,
+            "create_upload_token",
+            return_value="upload-token",
+        ) as create_upload_token,
+    ):
+        response = client.post(
+            "/api/feedback/audio/upload-url",
+            json={
+                "mimeType": "audio/wav",
+                "fileName": "test.wav",
+                "fileSizeBytes": 1234,
+            },
+        )
+
+    assert response.status_code == 200
+    create_upload_token.assert_called_once_with(
+        "feedback/audio/2026/04/19/test.wav",
+        "audio/wav",
+        max_bytes=1234,
+    )
+
+
+def test_upload_audio_feedback_rejects_payload_over_signed_limit():
+    client = _build_client()
+
+    with (
+        patch.object(
+            feedback_module.feedback_storage_service,
+            "verify_token",
+            return_value={
+                "storageId": "feedback/audio/2026/04/19/test.wav",
+                "mimeType": "audio/wav",
+                "maxBytes": 4,
+            },
+        ),
+        patch.object(
+            feedback_module.feedback_storage_service,
+            "upload_bytes",
+            AsyncMock(),
+        ) as upload_bytes,
+    ):
+        response = client.put(
+            "/api/feedback/audio/upload/signed-token",
+            content=b"12345",
+            headers={"Content-Type": "audio/wav"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Feedback upload exceeds maximum allowed size."
+    upload_bytes.assert_not_awaited()
 
 
 def test_feedback_admin_requires_auth():
@@ -134,6 +197,43 @@ def test_feedback_admin_requires_auth():
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Missing bearer token"
+
+
+def test_feedback_admin_capability_requires_auth():
+    client = _build_client(authenticated=False)
+
+    response = client.get("/api/feedback/admin/capability")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing bearer token"
+
+
+def test_feedback_admin_capability_returns_false_for_non_allowlisted_user():
+    client = _build_client(authenticated=True, email="member@example.com")
+
+    with patch.dict(
+        feedback_module.os.environ,
+        {"FEEDBACK_ADMIN_EMAILS": "admin@example.com"},
+        clear=False,
+    ):
+        response = client.get("/api/feedback/admin/capability")
+
+    assert response.status_code == 200
+    assert response.json() == {"isAdmin": False}
+
+
+def test_feedback_admin_capability_returns_true_for_allowlisted_user():
+    client = _build_client(authenticated=True, email="admin@example.com")
+
+    with patch.dict(
+        feedback_module.os.environ,
+        {"FEEDBACK_ADMIN_EMAILS": "admin@example.com"},
+        clear=False,
+    ):
+        response = client.get("/api/feedback/admin/capability")
+
+    assert response.status_code == 200
+    assert response.json() == {"isAdmin": True}
 
 
 def test_feedback_admin_rejects_authenticated_user_outside_allowlist():

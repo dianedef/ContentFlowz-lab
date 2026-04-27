@@ -12,6 +12,7 @@ from api.dependencies.auth import (
     require_current_user,
 )
 from api.models.feedback import (
+    FeedbackAdminCapabilityResponse,
     FeedbackAdminListResponse,
     FeedbackAudioCreateRequest,
     FeedbackAudioUploadUrlRequest,
@@ -152,6 +153,7 @@ async def get_audio_upload_url(
         token = feedback_storage_service.create_upload_token(
             storage_id,
             payload.mimeType.strip().lower(),
+            max_bytes=payload.fileSizeBytes,
         )
     except FeedbackStorageError as exc:
         _raise_storage_error(
@@ -177,11 +179,25 @@ async def upload_audio_feedback(
             token,
             expected_action="upload",
         )
+        max_bytes_value = token_payload.get("maxBytes")
+        max_bytes = int(max_bytes_value) if max_bytes_value is not None else None
+
+        content_length_header = request.headers.get("content-length")
+        if max_bytes is not None and content_length_header:
+            try:
+                content_length = int(content_length_header)
+            except ValueError as exc:
+                raise FeedbackStorageError("Feedback upload content length is invalid.") from exc
+            if content_length > max_bytes:
+                raise FeedbackStorageError("Feedback upload exceeds maximum allowed size.")
+
         mime_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
         expected_mime = str(token_payload.get("mimeType", "")).strip().lower()
         if expected_mime and mime_type and mime_type != expected_mime:
             raise FeedbackStorageError("Feedback upload content type mismatch.")
         body = await request.body()
+        if max_bytes is not None and len(body) > max_bytes:
+            raise FeedbackStorageError("Feedback upload exceeds maximum allowed size.")
         await feedback_storage_service.upload_bytes(
             storage_id=token_payload["storageId"],
             body=body,
@@ -194,6 +210,8 @@ async def upload_audio_feedback(
                 "token" in str(exc).lower()
                 or "payload is empty" in str(exc).lower()
                 or "content type mismatch" in str(exc).lower()
+                or "maximum allowed size" in str(exc).lower()
+                or "content length is invalid" in str(exc).lower()
             ),
         )
 
@@ -228,6 +246,16 @@ async def create_audio_feedback(
     except RuntimeError as exc:
         _raise_store_error(exc)
     return _serialize_entry(entry)
+
+
+@router.get("/admin/capability", response_model=FeedbackAdminCapabilityResponse)
+async def feedback_admin_capability(
+    current_user: CurrentUser = Depends(require_current_user),
+) -> FeedbackAdminCapabilityResponse:
+    email = _normalize_optional_email(current_user.email)
+    return FeedbackAdminCapabilityResponse(
+        isAdmin=bool(email and email in _admin_allowlist())
+    )
 
 
 @router.get("/admin", response_model=FeedbackAdminListResponse)

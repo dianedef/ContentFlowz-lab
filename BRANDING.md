@@ -4,21 +4,23 @@ metadata_schema_version: "1.0"
 artifact_version: "0.1.0"
 project: contentflow_lab
 created: "2026-04-25"
-updated: "2026-04-25"
+updated: "2026-04-26"
 status: draft
 source_skill: sf-docs
 scope: brand
-owner: unknown
+owner: "Diane"
 confidence: low
 risk_level: medium
-security_impact: unknown
+security_impact: none
 docs_impact: yes
-brand_voice: unknown
-trust_posture: unknown
+brand_voice: "Précis, fiable, opérationnel et transparent sur les limites"
+trust_posture: "Communication claire sur promesses, observabilité des erreurs et sécurité explicite"
 depends_on: []
 supersedes: []
-evidence: []
-next_review: "unknown"
+evidence:
+  - BUSINESS.md
+  - CLAUDE.md
+next_review: "2026-07-26"
 next_step: /sf-docs audit BRANDING.md
 ---
 # Branding Guide

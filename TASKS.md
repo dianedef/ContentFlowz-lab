@@ -494,3 +494,14 @@ Garder `allow_delegation=False` sur les agents terminaux (ceux qui produisent l'
 - [ ] **Plan management** — le pattern update_plan avec statuts (pending/in_progress/completed) est transposable à l'orchestration des pipelines CrewAI
 
 **Priorité :** Backlog — à intégrer progressivement lors de l'externalisation des prompts (P0.1)
+
+### Audit: Code (2026-04-27)
+
+| Pri | Task | Status |
+|-----|------|--------|
+| ✅ | Bound anonymous feedback audio uploads with signed max-bytes limits and content-length/body enforcement | ✅ done |
+| ✅ | Harden GitHub OAuth state consumption against replay race conditions (`UPDATE ... RETURNING` + locked fallback) | ✅ done |
+| ✅ | Cap in-memory rate-limiter active client tracking to reduce unbounded memory growth risk | ✅ done |
+| ✅ | Enforce `USER_SECRETS_MASTER_KEY` on GitHub integration store operations and run startup rotation for legacy plaintext tokens | ✅ done |
+| 🟠 | Roll out `USER_SECRETS_MASTER_KEY` in all deployed environments so GitHub integration endpoints remain available in production | 📋 todo |
+| 🟡 | Add anti-automation controls for anonymous feedback upload URL issuance (captcha/challenge or stricter endpoint-specific quotas) | 📋 todo |
