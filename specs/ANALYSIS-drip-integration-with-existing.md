@@ -1,24 +1,24 @@
 ---
 artifact: spec
 metadata_schema_version: "1.0"
-artifact_version: "0.1.0"
+artifact_version: "1.0.0"
 project: contentflow_lab
 created: "2026-04-25"
-updated: "2026-04-25"
-status: draft
+updated: "2026-04-27"
+status: reviewed
 source_skill: sf-docs
 scope: feature
-owner: unknown
-confidence: low
+owner: Diane
+confidence: medium
 risk_level: medium
 security_impact: unknown
 docs_impact: yes
-user_story: "unknown (legacy spec migrated to ShipFlow metadata)"
+user_story: "Cartographier l'integration du module Drip avec les composants existants de ContentFlow Lab"
 linked_systems: []
 depends_on: []
 supersedes: []
 evidence: []
-next_step: "/sf-docs audit specs/ANALYSIS-drip-integration-with-existing.md"
+next_step: "/sf-docs audit specs/DRIP_IMPLEMENTATION.md"
 ---
 # Analyse d'integration : Content Drip × Existant ContentFlow Lab
 
@@ -31,6 +31,15 @@ Companion de: `SPEC-progressive-content-release.md`
 
 Cartographier ce qui existe deja dans le Lab, ce qu'on peut reutiliser directement,
 ce qu'on doit adapter, et ce qu'on doit creer from scratch pour le Content Drip.
+
+Ce document est fige comme reference d'analyse historique pour expliquer les choix
+de conception qui ont precede l'implementation.
+
+## Questions ouvertes (non bloquantes)
+
+- Valider la source de verite finale entre cette analyse et `specs/DRIP_IMPLEMENTATION.md` pour eviter une double maintenance.
+- Confirmer si les endpoints "analyze/approve/start/status" de la spec initiale doivent etre conserves en alias ou consideres obsoletes face aux endpoints implementes.
+- Decider si ce document doit rester un artefact d'analyse historique ou etre converti en ADR (decision record) succinct.
 
 ---
 

@@ -1,15 +1,15 @@
 ---
 artifact: spec
 metadata_schema_version: "1.0"
-artifact_version: "0.1.0"
+artifact_version: "1.0.0"
 project: contentflow_lab
 created: "2026-04-25"
-updated: "2026-04-25"
-status: draft
+updated: "2026-04-27"
+status: ready
 source_skill: sf-docs
 scope: feature
-owner: unknown
-confidence: low
+owner: "Diane"
+confidence: medium
 risk_level: medium
 security_impact: unknown
 docs_impact: yes

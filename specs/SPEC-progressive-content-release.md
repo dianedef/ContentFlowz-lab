@@ -1,19 +1,19 @@
 ---
 artifact: spec
 metadata_schema_version: "1.0"
-artifact_version: "0.1.0"
+artifact_version: "1.0.0"
 project: contentflow_lab
 created: "2026-04-25"
-updated: "2026-04-25"
-status: draft
+updated: "2026-04-27"
+status: ready
 source_skill: sf-docs
 scope: feature
-owner: unknown
-confidence: low
+owner: Diane
+confidence: medium
 risk_level: medium
 security_impact: unknown
 docs_impact: yes
-user_story: "unknown (legacy spec migrated to ShipFlow metadata)"
+user_story: "Planifier et executer une publication progressive de contenu SSG sans departs d'indexation prematuree"
 linked_systems: []
 depends_on: []
 supersedes: []
@@ -23,7 +23,7 @@ next_step: "/sf-docs audit specs/SPEC-progressive-content-release.md"
 # Spec: Progressive Content Release (Content Drip)
 
 Date: 2026-04-06
-Status: Draft
+Status: Ready
 Author: Diane + Claude
 
 ---

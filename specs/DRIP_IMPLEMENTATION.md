@@ -1,28 +1,46 @@
 ---
 artifact: spec
 metadata_schema_version: "1.0"
-artifact_version: "0.1.0"
+artifact_version: "1.0.0"
 project: contentflow_lab
 created: "2026-04-25"
-updated: "2026-04-25"
-status: draft
+updated: "2026-04-27"
+status: reviewed
 source_skill: sf-docs
 scope: feature
-owner: unknown
-confidence: low
+owner: Diane
+confidence: high
 risk_level: medium
 security_impact: unknown
 docs_impact: yes
-user_story: "unknown (legacy spec migrated to ShipFlow metadata)"
-linked_systems: []
+user_story: "Documenter le comportement implémente du module Drip et ses contrats SSG de publication progressive"
+linked_systems:
+  - "api/routers/drip.py"
+  - "api/services/drip_service.py"
+  - "scheduler/scheduler_service.py"
+  - "tests/test_drip_index_proof.py"
 depends_on: []
 supersedes: []
-evidence: []
+evidence:
+  - "api/main.py inclut drip_router"
+  - "api/routers/drip.py expose les routes /api/drip/*"
+  - "api/services/drip_service.py implemente execute_drip_tick et preflight_plan"
+  - "tests/test_drip_index_proof.py couvre le mode index-proof"
 next_step: "/sf-docs audit specs/DRIP_IMPLEMENTATION.md"
 ---
 # Drip — Progressive Publishing (Implementation Notes)
 
 This document describes the **real implementation** of Content Drip in `contentflow_lab` (FastAPI + scheduler) and the expected **SSG-side contracts** to make it “Google-index-proof”.
+
+## Status rationale
+
+This file is `reviewed` because the implementation it documents is present in the repo:
+
+- `api/main.py` includes `drip_router`
+- `api/routers/drip.py` exposes `/api/drip/*` routes
+- `api/services/drip_service.py` implements core lifecycle (`activate`, `execute_drip_tick`, `preflight_plan`)
+- `scheduler/scheduler_service.py` dispatches `job_type="drip"`
+- `tests/test_drip_index_proof.py` asserts index-proof behavior
 
 ## What Drip does (server-side)
 
@@ -135,4 +153,3 @@ Server env supported:
 - GSC submission failing:
   - confirm service account is owner in the GSC property
   - confirm Google API libs are installed and credentials env is present
-
